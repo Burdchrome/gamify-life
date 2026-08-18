@@ -1,9 +1,20 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { HabitCard, type Habit } from "./components/habit-card";
+import { TodayCompletions, type TodayHabit } from "./components/today-completions";
 import { LocalDate } from "./components/local-date";
-import { OpsProgress } from "./components/ops-progress";
 import { EmptyState, TodayError } from "./components/today-states";
+import {
+  countCompletionsThisWeek,
+  getLocalDateIso,
+  getWeekBounds,
+} from "@/lib/dates";
+import { createClient } from "@/lib/supabase/server";
+
+type HabitRow = {
+  id: string;
+  name: string;
+  target_per_week: number;
+  completions: { completed_on: string }[] | null;
+};
 
 export default async function Home() {
   const supabase = await createClient();
@@ -18,13 +29,28 @@ export default async function Home() {
     redirect("/login");
   }
 
+  const userId = data.claims.sub;
+
+  if (!userId) {
+    console.error("Supabase home auth check failed", {
+      message: "Missing auth subject.",
+    });
+    redirect("/login");
+  }
+
+  const now = new Date();
+  const today = getLocalDateIso(now);
+  const weekBounds = getWeekBounds(now);
   const {
     data: habitRows,
     error: habitsError,
   } = await supabase
     .from("habits")
-    .select("id, name, target_per_week")
+    .select("id, name, target_per_week, completions(completed_on)")
+    .eq("user_id", userId)
     .eq("is_archived", false)
+    .gte("completions.completed_on", weekBounds.weekStart)
+    .lte("completions.completed_on", weekBounds.weekEnd)
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });
 
@@ -32,7 +58,23 @@ export default async function Home() {
     console.error("Supabase habits fetch failed", { message: habitsError.message });
   }
 
-  const habits = (habitRows ?? []) as Habit[];
+  const habits = ((habitRows ?? []) as HabitRow[]).map<TodayHabit>((habit) => {
+    const completedOnDates = (habit.completions ?? []).map(
+      (completion) => completion.completed_on,
+    );
+
+    return {
+      id: habit.id,
+      name: habit.name,
+      target_per_week: habit.target_per_week,
+      isCompletedToday: completedOnDates.includes(today),
+      weeklyCompletionCount: countCompletionsThisWeek(
+        completedOnDates,
+        weekBounds,
+      ),
+    };
+  });
+  const completedCount = habits.filter((habit) => habit.isCompletedToday).length;
 
   async function signOut() {
     "use server";
@@ -76,21 +118,22 @@ export default async function Home() {
               </form>
             </div>
           </div>
-          <OpsProgress habitCount={habits.length} />
         </header>
-        <div className="h-px bg-cyan-divider" />
         {habitsError ? (
-          <TodayError />
+          <>
+            <div className="h-px bg-cyan-divider" />
+            <TodayError />
+          </>
         ) : habits.length > 0 ? (
-          <ul className="flex flex-col gap-2 py-5" aria-label="Today's habits">
-            {habits.map((habit) => (
-              <li key={habit.id}>
-                <HabitCard habit={habit} />
-              </li>
-            ))}
-          </ul>
+          <TodayCompletions
+            habits={habits}
+            initialCompletedCount={completedCount}
+          />
         ) : (
-          <EmptyState />
+          <>
+            <div className="h-px bg-cyan-divider" />
+            <EmptyState />
+          </>
         )}
       </section>
     </main>

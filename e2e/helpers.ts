@@ -92,6 +92,7 @@ export async function deleteUserRows(
   supabase: SupabaseClient,
   accountLabel: string,
 ) {
+  await deleteCompletionRows(supabase, accountLabel);
   await deleteHabitRows(supabase, accountLabel);
 }
 
@@ -104,6 +105,23 @@ export async function seedHabitRows(
 
   if (error) {
     throw new Error(`Habit seed failed for ${accountLabel}: ${error.message}`);
+  }
+}
+
+async function deleteCompletionRows(
+  supabase: SupabaseClient,
+  accountLabel: string,
+) {
+  const emptyUuid = "00000000-0000-0000-0000-000000000000";
+  const { error } = await supabase
+    .from("completions")
+    .delete()
+    .neq("id", emptyUuid);
+
+  if (error) {
+    throw new Error(
+      `Completion cleanup failed for ${accountLabel}: ${error.message}`,
+    );
   }
 }
 
