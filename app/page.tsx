@@ -1,4 +1,5 @@
-import { redirect } from "next/navigation";
+import Link from "next/link";
+import { signOut } from "./actions/sign-out";
 import { TodayCompletions, type TodayHabit } from "./components/today-completions";
 import { LocalDate } from "./components/local-date";
 import { EmptyState, TodayError } from "./components/today-states";
@@ -7,6 +8,7 @@ import {
   getLocalDateIso,
   getWeekBounds,
 } from "@/lib/dates";
+import { requireUserId } from "@/lib/supabase/require-user";
 import { createClient } from "@/lib/supabase/server";
 
 type HabitRow = {
@@ -17,26 +19,8 @@ type HabitRow = {
 };
 
 export default async function Home() {
+  const userId = await requireUserId("home");
   const supabase = await createClient();
-  // Page-level re-check on top of proxy.ts: a misconfigured matcher would bypass the proxy silently (stack-research §2 "belt and braces")
-  const { data, error } = await supabase.auth.getClaims();
-
-  if (error) {
-    console.error("Supabase home auth check failed", { message: error.message });
-  }
-
-  if (error || !data?.claims) {
-    redirect("/login");
-  }
-
-  const userId = data.claims.sub;
-
-  if (!userId) {
-    console.error("Supabase home auth check failed", {
-      message: "Missing auth subject.",
-    });
-    redirect("/login");
-  }
 
   const now = new Date();
   const today = getLocalDateIso(now);
@@ -76,19 +60,6 @@ export default async function Home() {
   });
   const completedCount = habits.filter((habit) => habit.isCompletedToday).length;
 
-  async function signOut() {
-    "use server";
-
-    const supabase = await createClient();
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      console.error("Supabase sign-out failed", { message: error.message });
-    }
-
-    redirect("/login");
-  }
-
   return (
     <main className="min-h-dvh bg-ground text-text-primary">
       <div className="scanline-overlay" aria-hidden="true" />
@@ -108,14 +79,22 @@ export default async function Home() {
               <p className="mt-1 font-orbitron text-[9px] font-bold uppercase tracking-[2px] text-yellow/50">
                 RANK
               </p>
-              <form action={signOut} className="mt-3">
-                <button
-                  className="min-h-11 rounded-[8px] border border-cyan-divider px-3 font-orbitron text-[9px] font-bold uppercase tracking-[2px] text-cyan transition hover:border-cyan disabled:text-text-muted"
-                  type="submit"
+              <div className="mt-3 flex items-center justify-end gap-2">
+                <Link
+                  className="inline-flex min-h-11 items-center rounded-[8px] border border-cyan-divider px-3 font-orbitron text-[9px] font-bold uppercase tracking-[2px] text-cyan transition hover:border-cyan"
+                  href="/manage"
                 >
-                  DISCONNECT
-                </button>
-              </form>
+                  MANAGE
+                </Link>
+                <form action={signOut}>
+                  <button
+                    className="min-h-11 rounded-[8px] border border-cyan-divider px-3 font-orbitron text-[9px] font-bold uppercase tracking-[2px] text-cyan transition hover:border-cyan disabled:text-text-muted"
+                    type="submit"
+                  >
+                    DISCONNECT
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         </header>

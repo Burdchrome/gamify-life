@@ -53,4 +53,10 @@ test("failed write reverts the toggle and surfaces an error", async ({ page }) =
   await expect(hydrate).toHaveAttribute("aria-pressed", "true");
   await expect(hydrate.getByText("SYNC FAILED - RETRY")).toHaveCount(0);
   await expect(page.getByText("1/2 OPS COMPLETE")).toBeVisible();
+
+  // Seeding runs once per suite and data specs share state (alphabetical file
+  // order: completions → manage → today), so leave HYDRATE un-completed.
+  await hydrate.click();
+  await expect(hydrate).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByText("0/2 OPS COMPLETE")).toBeVisible();
 });
