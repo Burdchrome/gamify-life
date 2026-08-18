@@ -1,0 +1,18 @@
+# deps / build
+node_modules/
+.next/
+out/
+
+# env — secrets and local credentials never enter git
+.env
+.env.*
+!.env.example
+
+# test artifacts
+test-results/
+playwright-report/
+
+# misc
+.DS_Store
+*.log
+.vercel/
