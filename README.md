@@ -21,7 +21,14 @@ Open `http://localhost:3000`.
 ## Layout
 
 - `app/` — the Next.js app: pages, layout, global styles/design tokens
+- `lib/supabase/` — Supabase client plumbing (browser, server, proxy session refresh)
+- `e2e/` — Playwright end-to-end tests (real hosted Supabase, no mocks)
 - `docs/` — project context (see the doc map)
+
+## Environment
+
+Copy `.env.example` to `.env.local` and fill in the Supabase URL + publishable
+key (plus `TEST_EMAIL`/`TEST_PASSWORD` to run e2e).
 
 ## Doc Map
 
