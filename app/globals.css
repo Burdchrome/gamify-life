@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-*: initial;
+  --color-ground: #0C0E15;
+  --color-surface: #161923;
+  --color-cyan: #25E1ED;
+  --color-gold: #CDAD36;
+  --color-yellow: #F0D000;
+  --color-text-primary: #E8E6E3;
+  --color-text-dim: rgb(255 255 255 / 70%);
+  --color-text-muted: rgb(255 255 255 / 30%);
+  --color-error: #FF4444;
+  --color-cyan-divider: rgb(37 225 237 / 12%);
+  --font-orbitron: var(--font-orbitron-variable);
+  --font-rajdhani: var(--font-rajdhani-variable);
+  --font-sans: var(--font-rajdhani-variable);
+}
+
+:root {
+  color-scheme: dark;
+  background: var(--color-ground);
+  color: var(--color-text-primary);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--color-ground);
+}
+
+body {
+  min-height: 100dvh;
+  margin: 0;
+  background: var(--color-ground);
+  color: var(--color-text-primary);
+  font-family: var(--font-rajdhani-variable), sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.scanline-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgb(255 255 255 / 1.2%) 2px,
+    rgb(255 255 255 / 1.2%) 4px
+  );
+}
