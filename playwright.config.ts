@@ -28,8 +28,13 @@ export default defineConfig({
       testMatch: /cleanup\.ts/,
     },
     {
-      name: "chromium",
-      testMatch: /.*\.spec\.ts/,
+      name: "chromium auth",
+      testMatch: /auth\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "chromium data",
+      testMatch: /today\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
       dependencies: ["setup db"],
     },

@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { HabitCard, type Habit } from "./components/habit-card";
 import { LocalDate } from "./components/local-date";
+import { OpsProgress } from "./components/ops-progress";
+import { EmptyState, TodayError } from "./components/today-states";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -15,6 +18,22 @@ export default async function Home() {
     redirect("/login");
   }
 
+  const {
+    data: habitRows,
+    error: habitsError,
+  } = await supabase
+    .from("habits")
+    .select("id, name, target_per_week")
+    .eq("is_archived", false)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+
+  if (habitsError) {
+    console.error("Supabase habits fetch failed", { message: habitsError.message });
+  }
+
+  const habits = (habitRows ?? []) as Habit[];
+
   async function signOut() {
     "use server";
 
@@ -22,7 +41,7 @@ export default async function Home() {
     const { error } = await supabase.auth.signOut();
 
     if (error) {
-      console.error("Supabase sign-out failed", { error });
+      console.error("Supabase sign-out failed", { message: error.message });
     }
 
     redirect("/login");
@@ -57,13 +76,22 @@ export default async function Home() {
               </form>
             </div>
           </div>
+          <OpsProgress habitCount={habits.length} />
         </header>
         <div className="h-px bg-cyan-divider" />
-        <div className="flex flex-1 items-center justify-center py-16">
-          <p className="font-rajdhani text-[13px] font-semibold uppercase tracking-[0.5px] text-text-muted">
-            NO OPS LOADED - SYSTEM STANDBY
-          </p>
-        </div>
+        {habitsError ? (
+          <TodayError />
+        ) : habits.length > 0 ? (
+          <ul className="flex flex-col gap-2 py-5" aria-label="Today's habits">
+            {habits.map((habit) => (
+              <li key={habit.id}>
+                <HabitCard habit={habit} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <EmptyState />
+        )}
       </section>
     </main>
   );

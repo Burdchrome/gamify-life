@@ -2,6 +2,8 @@
 
 @theme inline {
   --color-*: initial;
+  /* white exists only for the design language's white-alpha chrome (card borders, empty bar segments) */
+  --color-white: #FFFFFF;
   --color-ground: #0C0E15;
   --color-surface: #161923;
   --color-cyan: #25E1ED;
