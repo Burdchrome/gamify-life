@@ -71,7 +71,7 @@ test("manage view creates, edits, retargets, and archives a habit", async ({
     page.getByLabel("Archived protocols").getByText("MEDITATE PM"),
   ).toBeVisible();
   await expect(
-    page.getByLabel("Archived protocols").getByText("ARCHIVED"),
+    page.getByLabel("Archived protocols").getByText("ARCHIVED", { exact: true }),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "TODAY" }).click();

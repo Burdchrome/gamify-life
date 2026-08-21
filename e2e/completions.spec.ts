@@ -56,7 +56,12 @@ test("failed write reverts the toggle and surfaces an error", async ({ page }) =
 
   // Seeding runs once per suite and data specs share state (alphabetical file
   // order: completions → manage → today), so leave HYDRATE un-completed.
+  // Reload after the toggle: asserting only the optimistic state lets the test
+  // end before the DELETE reaches Supabase, leaking the completion to today.spec.
   await hydrate.click();
   await expect(hydrate).toHaveAttribute("aria-pressed", "false");
+  await page.reload();
+  const hydrateAfter = page.getByRole("button", { name: /HYDRATE/ });
+  await expect(hydrateAfter).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByText("0/2 OPS COMPLETE")).toBeVisible();
 });

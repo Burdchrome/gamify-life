@@ -32,3 +32,7 @@ pnpm-debug.log*
 .vercel/
 *.tsbuildinfo
 next-env.d.ts
+
+.vercel
+.env*
+supabase/.temp/
