@@ -21,7 +21,9 @@
 
 Every request first passes `proxy.ts` (Next 16's rename of middleware): it
 refreshes the Supabase session cookie and bounces signed-out visitors to
-`/login`. Then the **server component** for the page re-checks auth
+`/login`. Gotcha: any route the browser fetches *without* being signed in
+(e.g. `/manifest.webmanifest` during home-screen install) must be excluded
+in the matcher, or unauthenticated fetches get the login page instead. Then the **server component** for the page re-checks auth
 (`requireUserId` — belt and braces, in case the proxy matcher ever drifts) and
 fetches that user's rows. The page ships to the browser with small **client
 leaves** for anything interactive: the habit-card tap, the Manage forms, the
