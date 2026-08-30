@@ -3,11 +3,7 @@ import { signOut } from "./actions/sign-out";
 import { TodayCompletions, type TodayHabit } from "./components/today-completions";
 import { LocalDate } from "./components/local-date";
 import { EmptyState, TodayError } from "./components/today-states";
-import {
-  countCompletionsThisWeek,
-  getLocalDateIso,
-  getWeekBounds,
-} from "@/lib/dates";
+import { getCompletionsFetchFloor } from "@/lib/dates";
 import { requireUserId } from "@/lib/supabase/require-user";
 import { createClient } from "@/lib/supabase/server";
 
@@ -22,9 +18,9 @@ export default async function Home() {
   const userId = await requireUserId("home");
   const supabase = await createClient();
 
-  const now = new Date();
-  const today = getLocalDateIso(now);
-  const weekBounds = getWeekBounds(now);
+  // The server never interprets "today" — it can be a calendar day off the
+  // device (issue #8). It ships a padded window of raw completion dates; the
+  // client derives today/week with the device clock in today-completions.tsx.
   const {
     data: habitRows,
     error: habitsError,
@@ -33,8 +29,7 @@ export default async function Home() {
     .select("id, name, target_per_week, completions(completed_on)")
     .eq("user_id", userId)
     .eq("is_archived", false)
-    .gte("completions.completed_on", weekBounds.weekStart)
-    .lte("completions.completed_on", weekBounds.weekEnd)
+    .gte("completions.completed_on", getCompletionsFetchFloor(new Date()))
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });
 
@@ -42,23 +37,14 @@ export default async function Home() {
     console.error("Supabase habits fetch failed", { message: habitsError.message });
   }
 
-  const habits = ((habitRows ?? []) as HabitRow[]).map<TodayHabit>((habit) => {
-    const completedOnDates = (habit.completions ?? []).map(
+  const habits = ((habitRows ?? []) as HabitRow[]).map<TodayHabit>((habit) => ({
+    id: habit.id,
+    name: habit.name,
+    target_per_week: habit.target_per_week,
+    completedOnDates: (habit.completions ?? []).map(
       (completion) => completion.completed_on,
-    );
-
-    return {
-      id: habit.id,
-      name: habit.name,
-      target_per_week: habit.target_per_week,
-      isCompletedToday: completedOnDates.includes(today),
-      weeklyCompletionCount: countCompletionsThisWeek(
-        completedOnDates,
-        weekBounds,
-      ),
-    };
-  });
-  const completedCount = habits.filter((habit) => habit.isCompletedToday).length;
+    ),
+  }));
 
   return (
     <main className="min-h-dvh bg-ground text-text-primary">
@@ -104,10 +90,7 @@ export default async function Home() {
             <TodayError />
           </>
         ) : habits.length > 0 ? (
-          <TodayCompletions
-            habits={habits}
-            initialCompletedCount={completedCount}
-          />
+          <TodayCompletions habits={habits} />
         ) : (
           <>
             <div className="h-px bg-cyan-divider" />

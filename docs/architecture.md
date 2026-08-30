@@ -52,11 +52,20 @@ never "open now, lock later."
 
 ## One deliberate subtlety: the local day
 
-`completed_on` is a plain date computed from the **device's local clock**
-(`lib/dates.ts`, pure functions) — an 11:50pm tap counts for today, not
-tomorrow-in-UTC. Weeks start Monday. This logic is unit-tested including the
-near-midnight trap, with the test runner pinned west-of-UTC so the trap case
-can never silently skip.
+The device's clock is the **only** clock that interprets a calendar day — on
+the write path *and* the read path. `completed_on` is a plain date computed
+from the device's local clock at tap time (`lib/dates.ts`, pure functions) —
+an 11:50pm tap counts for today, not tomorrow-in-UTC. Weeks start Monday.
+On read, the server never computes "today" (its clock is UTC and can sit a
+calendar day off the device — issue #8, where an evening tap unchecked
+itself on refresh): it ships a padded window of raw completion dates
+(`getCompletionsFetchFloor`) and the client derives today/week after
+hydration (`today-completions.tsx`). Guards: the near-midnight unit tests run
+pinned west-of-UTC so the trap case can never silently skip, and
+`npm run test:e2e:tzskew` boots the dev server on a clock a full calendar day
+off the browser's (`playwright.tzskew.config.ts` + `e2e/tz-skew.cjs`) and
+re-runs the completions persist spec, so the dual-clock bug class stays
+unrepresentable.
 
 ## How we know it works
 

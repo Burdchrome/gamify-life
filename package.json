@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:tzskew": "playwright test --config playwright.tzskew.config.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

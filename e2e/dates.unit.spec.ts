@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
   countCompletionsThisWeek,
+  getCompletionsFetchFloor,
   getLocalDateIso,
   getWeekBounds,
 } from "../lib/dates";
@@ -49,6 +50,25 @@ test("week bounds start on the same day for a Monday", () => {
     weekStart: "2026-08-24",
     weekEnd: "2026-08-30",
   });
+});
+
+test("completions fetch floor reaches 9 days back, across a month edge", () => {
+  const earlySeptember = new Date(2026, 8, 3, 12);
+
+  expect(getCompletionsFetchFloor(earlySeptember)).toBe("2026-08-25");
+});
+
+test("fetch floor covers a device week even when the server day trails by one", () => {
+  // Worst case for issue #8: device is a calendar day AHEAD of the server and
+  // its today is a Sunday, putting the device weekStart 6 days behind device
+  // today = 7 behind server today. The floor must still reach it.
+  const deviceSunday = new Date(2026, 7, 23, 12);
+  const trailingServerNow = new Date(2026, 7, 22, 23);
+
+  const deviceWeek = getWeekBounds(deviceSunday);
+  const floor = getCompletionsFetchFloor(trailingServerNow);
+
+  expect(floor <= deviceWeek.weekStart).toBe(true);
 });
 
 test("weekly completion count includes only dates inside the bounds", () => {

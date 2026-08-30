@@ -27,6 +27,19 @@ export function getWeekBounds(now: Date): WeekBounds {
   };
 }
 
+// Server-side fetch floor for completions. The server's calendar day can sit
+// a day off the device's (server renders in UTC; devices span UTC-12..+14),
+// and a Monday-start week reaches at most 6 days behind the device's today —
+// worst case 7 days behind the server's. 9 days keeps margin; the client
+// filters precisely with its own clock (issue #8: only the device interprets
+// "today").
+export function getCompletionsFetchFloor(now: Date): LocalDateIso {
+  const floor = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  floor.setDate(floor.getDate() - 9);
+
+  return getLocalDateIso(floor);
+}
+
 export function countCompletionsThisWeek(
   completedOnDates: string[],
   bounds: WeekBounds,

@@ -1,36 +1,88 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+import {
+  countCompletionsThisWeek,
+  getLocalDateIso,
+  getWeekBounds,
+} from "@/lib/dates";
 import { HabitCard, type Habit } from "./habit-card";
 import { OpsProgress } from "./ops-progress";
 
 export type TodayHabit = Habit & {
+  completedOnDates: string[];
+};
+
+type DerivedTodayHabit = Habit & {
   isCompletedToday: boolean;
   weeklyCompletionCount: number;
 };
 
 type TodayCompletionsProps = {
   habits: TodayHabit[];
-  initialCompletedCount: number;
 };
 
-export function TodayCompletions(props: TodayCompletionsProps) {
+const subscribeToNothing = () => () => {};
+
+export function TodayCompletions({ habits }: TodayCompletionsProps) {
+  // "Today" belongs to the DEVICE clock alone (issue #8: the server renders in
+  // UTC and can sit on the wrong calendar day). Derivation waits for hydration
+  // so the server pass never interprets the dates — same tradeoff
+  // local-date.tsx makes for the header date.
+  const isHydrated = useSyncExternalStore(
+    subscribeToNothing,
+    () => true,
+    () => false,
+  );
+
+  if (!isHydrated) {
+    return null;
+  }
+
+  const deviceNow = new Date();
+  const today = getLocalDateIso(deviceNow);
+  const weekBounds = getWeekBounds(deviceNow);
+  const derivedHabits = habits.map<DerivedTodayHabit>((habit) => ({
+    id: habit.id,
+    name: habit.name,
+    target_per_week: habit.target_per_week,
+    isCompletedToday: habit.completedOnDates.includes(today),
+    weeklyCompletionCount: countCompletionsThisWeek(
+      habit.completedOnDates,
+      weekBounds,
+    ),
+  }));
+  const completedCount = derivedHabits.filter(
+    (habit) => habit.isCompletedToday,
+  ).length;
+
   // key from server truth: when router.refresh() delivers new props, the changed key
   // remounts the stateful subtree so optimistic client state re-seeds from the DB.
-  const stateKey = props.habits
-    .map(
-      (habit) =>
-        `${habit.id}:${habit.isCompletedToday}:${habit.weeklyCompletionCount}`,
-    )
-    .join("|");
+  // today is part of the key so a date rollover re-derives too.
+  const stateKey =
+    derivedHabits
+      .map(
+        (habit) =>
+          `${habit.id}:${habit.isCompletedToday}:${habit.weeklyCompletionCount}`,
+      )
+      .join("|") + `|${today}`;
 
-  return <TodayCompletionsState key={stateKey} {...props} />;
+  return (
+    <TodayCompletionsState
+      key={stateKey}
+      habits={derivedHabits}
+      initialCompletedCount={completedCount}
+    />
+  );
 }
 
 function TodayCompletionsState({
   habits,
   initialCompletedCount,
-}: TodayCompletionsProps) {
+}: {
+  habits: DerivedTodayHabit[];
+  initialCompletedCount: number;
+}) {
   const [completedCount, setCompletedCount] = useState(initialCompletedCount);
 
   function adjustCompletedCount(delta: number) {
