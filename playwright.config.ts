@@ -9,7 +9,7 @@ process.env.TZ = process.env.TZ ?? "America/New_York";
 
 const cliArgs = process.argv.slice(2);
 const isUnitOnlyRun = cliArgs.some((arg, index) =>
-  arg.includes("dates.unit.spec.ts") ||
+  arg.includes(".unit.spec.ts") ||
   arg === "--project=unit" ||
   (arg === "--project" && cliArgs[index + 1] === "unit"),
 );
@@ -33,7 +33,7 @@ export default defineConfig({
   projects: [
     {
       name: "unit",
-      testMatch: /dates\.unit\.spec\.ts/,
+      testMatch: /\.unit\.spec\.ts$/,
     },
     {
       name: "setup db",
@@ -51,7 +51,7 @@ export default defineConfig({
     },
     {
       name: "chromium data",
-      testMatch: /(today|completions|manage|backdate)\.spec\.ts/,
+      testMatch: /(today|completions|manage|backdate|task|rest)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
       dependencies: ["setup db"],
     },

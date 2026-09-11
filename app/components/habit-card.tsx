@@ -8,10 +8,12 @@ import {
   type LocalDateIso,
 } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/client";
+import { type HabitKind } from "./manage/types";
 
 export type Habit = {
   id: string;
   name: string;
+  kind: HabitKind;
   target_per_week: number;
 };
 
@@ -20,6 +22,7 @@ type HabitCardProps = {
   initialIsCompletedToday: boolean;
   initialWeeklyCompletionCount: number;
   completedOnDates: string[];
+  isResting: boolean;
   onTodayCompletionChange: (delta: number) => void;
 };
 
@@ -38,6 +41,7 @@ export function HabitCard({
   initialIsCompletedToday,
   initialWeeklyCompletionCount,
   completedOnDates,
+  isResting,
   onTodayCompletionChange,
 }: HabitCardProps) {
   const router = useRouter();
@@ -81,15 +85,12 @@ export function HabitCard({
           .eq("habit_id", habit.id)
           .eq("completed_on", completedOn);
 
-    if (error) {
-      // Unique violation = the row already exists (race or stale view): the optimistic
-      // "complete" state is already truth, so skip the revert and just resync.
-      if (nextIsCompletedToday && error.code === uniqueViolationCode) {
-        setIsSyncing(false);
-        startTransition(() => router.refresh());
-        return;
-      }
+    // Unique violation = the row already exists (race or stale view): the optimistic
+    // "complete" state is already truth, so skip the revert and just resync.
+    const isDuplicateInsert =
+      nextIsCompletedToday && error?.code === uniqueViolationCode;
 
+    if (error && !isDuplicateInsert) {
       console.error("Supabase completion toggle failed", {
         action: nextIsCompletedToday ? "insert" : "delete",
         habitId: habit.id,
@@ -103,6 +104,36 @@ export function HabitCard({
       setSyncError("SYNC FAILED - RETRY");
       setIsSyncing(false);
       return;
+    }
+
+    // A task is done once: completing archives it, un-completing un-archives,
+    // so a mis-tap stays recoverable (issue #9).
+    if (habit.kind === "task") {
+      const { error: archiveError } = await supabase
+        .from("habits")
+        .update({ is_archived: nextIsCompletedToday })
+        .eq("id", habit.id);
+
+      if (archiveError) {
+        // The completion row already changed, so the checked state is truth;
+        // surface the half-applied pair instead of reverting over it.
+        console.error("Supabase task archive toggle failed", {
+          habitId: habit.id,
+          isArchived: nextIsCompletedToday,
+          code: archiveError.code,
+          message: archiveError.message,
+        });
+        setSyncError("SYNC FAILED - RETRY");
+        setIsSyncing(false);
+        return;
+      }
+
+      if (nextIsCompletedToday) {
+        // No refresh: the server drops archived tasks from Today, which would
+        // end the un-tap grace window instantly. It clears on the next load.
+        setIsSyncing(false);
+        return;
+      }
     }
 
     setIsSyncing(false);
@@ -137,6 +168,27 @@ export function HabitCard({
       return;
     }
 
+    // A backdated task was done on that day — it clears immediately (the
+    // deliberate two-step gesture doesn't need the mis-tap grace window).
+    if (habit.kind === "task") {
+      const { error: archiveError } = await supabase
+        .from("habits")
+        .update({ is_archived: true })
+        .eq("id", habit.id);
+
+      if (archiveError) {
+        console.error("Supabase backdated task archive failed", {
+          habitId: habit.id,
+          completedOn,
+          code: archiveError.code,
+          message: archiveError.message,
+        });
+        setSyncError("SYNC FAILED - RETRY");
+        setIsSyncing(false);
+        return;
+      }
+    }
+
     setIsBackdateOpen(false);
     setIsSyncing(false);
     startTransition(() => router.refresh());
@@ -146,11 +198,17 @@ export function HabitCard({
     weeklyCompletionCount,
     habit.target_per_week,
   );
+  // A weekly habit never renders past its target ("2/1"); daily overshoot
+  // stays honest — beating the quota is a win, not a glitch (issue #13).
+  const displayedWeeklyCount =
+    habit.kind === "weekly" ? completedSegmentCount : weeklyCompletionCount;
   const cardShellClassName = [
     "relative flex min-h-11 w-full overflow-hidden rounded-[4px]",
-    isCompletedToday
-      ? "border border-cyan/20 bg-cyan/[0.04] before:absolute before:inset-0 before:bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-cyan)_8%,transparent),transparent_60%)] before:content-[''] after:absolute after:inset-y-0 after:left-0 after:w-0.5 after:bg-cyan after:content-['']"
-      : "border border-white/[0.06] bg-white/[0.02]",
+    isResting
+      ? "border border-white/[0.06] bg-white/[0.02] opacity-55"
+      : isCompletedToday
+        ? "border border-cyan/20 bg-cyan/[0.04] before:absolute before:inset-0 before:bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-cyan)_8%,transparent),transparent_60%)] before:content-[''] after:absolute after:inset-y-0 after:left-0 after:w-0.5 after:bg-cyan after:content-['']"
+        : "border border-white/[0.06] bg-white/[0.02]",
   ].join(" ");
   const backdateDates = listBackdateDates(new Date());
 
@@ -160,21 +218,23 @@ export function HabitCard({
         <button
           aria-pressed={isCompletedToday}
           className="relative min-w-0 flex-1 px-[14px] py-3 text-left"
-          disabled={isSyncing}
+          disabled={isSyncing || isResting}
           onClick={toggleCompletion}
           type="button"
         >
-          <span
-            className={[
-              "absolute right-[14px] top-3 z-10 flex h-[18px] w-[18px] items-center justify-center font-rajdhani text-[14px] font-bold leading-none",
-              isCompletedToday
-                ? "border-2 border-cyan bg-cyan/15 text-cyan"
-                : "border border-white/15 text-transparent",
-            ].join(" ")}
-            aria-hidden="true"
-          >
-            {isCompletedToday ? "✓" : null}
-          </span>
+          {isResting ? null : (
+            <span
+              className={[
+                "absolute right-[14px] top-3 z-10 flex h-[18px] w-[18px] items-center justify-center font-rajdhani text-[14px] font-bold leading-none",
+                isCompletedToday
+                  ? "border-2 border-cyan bg-cyan/15 text-cyan"
+                  : "border border-white/15 text-transparent",
+              ].join(" ")}
+              aria-hidden="true"
+            >
+              {isCompletedToday ? "✓" : null}
+            </span>
+          )}
           <span className="relative z-10 block min-w-0 pr-8">
             <span
               className={[
@@ -190,29 +250,44 @@ export function HabitCard({
                 isCompletedToday ? "text-cyan/70" : "text-text-muted",
               ].join(" ")}
             >
-              <span>
-                WEEKLY {weeklyCompletionCount}/{habit.target_per_week}
-              </span>
-              {/* Streaks need multi-day history and stay zero until that loop. */}
-              <span>STREAK 0</span>
+              {habit.kind === "task" ? (
+                <span>ONE-OFF</span>
+              ) : isResting ? (
+                <span className="text-cyan/60">DONE FOR THIS WEEK</span>
+              ) : (
+                <span>
+                  {/* Daily reads as quiet progress ("days this week"); weekly
+                      reads as the target it is (issue #13). */}
+                  {habit.kind === "daily" ? "THIS WEEK" : "WEEKLY"}{" "}
+                  {displayedWeeklyCount}/{habit.target_per_week}
+                </span>
+              )}
             </span>
           </span>
-          <span
-            className="relative z-10 mt-3 grid h-[3px] gap-0.5"
-            style={{
-              gridTemplateColumns: `repeat(${habit.target_per_week}, minmax(0, 1fr))`,
-            }}
-            aria-hidden="true"
-          >
-            {Array.from({ length: habit.target_per_week }, (_, index) => (
-              <span
-                key={index}
-                className={
-                  index < completedSegmentCount ? "bg-cyan" : "bg-white/10"
-                }
-              />
-            ))}
-          </span>
+          {habit.kind === "task" ? null : (
+            <span
+              className="relative z-10 mt-3 grid h-[3px] gap-0.5"
+              style={{
+                gridTemplateColumns: `repeat(${habit.target_per_week}, minmax(0, 1fr))`,
+              }}
+              aria-hidden="true"
+            >
+              {Array.from({ length: habit.target_per_week }, (_, index) => (
+                <span
+                  key={index}
+                  className={
+                    index < completedSegmentCount
+                      ? // The daily bar is progress, not a demand — it sits dimmer
+                        // than the checkbox so "done today" stays the hero.
+                        habit.kind === "daily"
+                        ? "bg-cyan/40"
+                        : "bg-cyan"
+                      : "bg-white/10"
+                  }
+                />
+              ))}
+            </span>
+          )}
           {syncError ? (
             <span className="relative z-10 mt-2 block truncate font-rajdhani text-[11px] font-semibold uppercase tracking-[0.5px] text-error">
               {syncError}
@@ -228,7 +303,7 @@ export function HabitCard({
               ? "border-cyan/20 bg-cyan/10 text-cyan"
               : "border-white/[0.06] text-text-muted transition hover:text-cyan",
           ].join(" ")}
-          disabled={isSyncing}
+          disabled={isSyncing || isResting}
           onClick={() => setIsBackdateOpen(!isBackdateOpen)}
           type="button"
         >

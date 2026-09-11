@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 type HabitRow = {
   id: string;
   name: string;
+  kind: "task" | "daily" | "weekly";
   target_per_week: number;
   is_archived: boolean;
   created_at: string;
@@ -22,7 +23,7 @@ export default async function ManagePage() {
 
   const { data: habitRows, error: habitsError } = await supabase
     .from("habits")
-    .select("id, name, target_per_week, is_archived, created_at")
+    .select("id, name, kind, target_per_week, is_archived, created_at")
     .eq("user_id", userId)
     .order("is_archived", { ascending: true })
     .order("created_at", { ascending: true })
@@ -37,6 +38,7 @@ export default async function ManagePage() {
   const habits = ((habitRows ?? []) as HabitRow[]).map<ManageHabit>((habit) => ({
     id: habit.id,
     name: habit.name,
+    kind: habit.kind,
     target_per_week: habit.target_per_week,
     is_archived: habit.is_archived,
   }));

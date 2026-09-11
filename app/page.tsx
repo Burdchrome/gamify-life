@@ -3,13 +3,17 @@ import { signOut } from "./actions/sign-out";
 import { TodayCompletions, type TodayHabit } from "./components/today-completions";
 import { LocalDate } from "./components/local-date";
 import { EmptyState, TodayError } from "./components/today-states";
-import { getCompletionsFetchFloor } from "@/lib/dates";
+import {
+  getCompletionsFetchCeiling,
+  getCompletionsFetchFloor,
+} from "@/lib/dates";
 import { requireUserId } from "@/lib/supabase/require-user";
 import { createClient } from "@/lib/supabase/server";
 
 type HabitRow = {
   id: string;
   name: string;
+  kind: "task" | "daily" | "weekly";
   target_per_week: number;
   completions: { completed_on: string }[] | null;
 };
@@ -26,10 +30,11 @@ export default async function Home() {
     error: habitsError,
   } = await supabase
     .from("habits")
-    .select("id, name, target_per_week, completions(completed_on)")
+    .select("id, name, kind, target_per_week, completions(completed_on)")
     .eq("user_id", userId)
     .eq("is_archived", false)
     .gte("completions.completed_on", getCompletionsFetchFloor(new Date()))
+    .lte("completions.completed_on", getCompletionsFetchCeiling(new Date()))
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });
 
@@ -40,6 +45,7 @@ export default async function Home() {
   const habits = ((habitRows ?? []) as HabitRow[]).map<TodayHabit>((habit) => ({
     id: habit.id,
     name: habit.name,
+    kind: habit.kind,
     target_per_week: habit.target_per_week,
     completedOnDates: (habit.completions ?? []).map(
       (completion) => completion.completed_on,

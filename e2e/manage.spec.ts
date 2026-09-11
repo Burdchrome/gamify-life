@@ -26,7 +26,8 @@ test("manage view creates, edits, retargets, and archives a habit", async ({
   await page.getByRole("link", { name: "TODAY" }).click();
   await expect(page).toHaveURL(new RegExp("/$"));
   await expect(page.getByRole("button", { name: /MEDITATE/ })).toBeVisible();
-  await expect(page.getByText("WEEKLY 0/4")).toBeVisible();
+  // Default kind is daily, whose counter reads THIS WEEK (issue #13).
+  await expect(page.getByText("THIS WEEK 0/4")).toBeVisible();
 
   await page.getByRole("link", { name: "MANAGE" }).click();
   await page.getByLabel("Rename MEDITATE").fill("MEDITATE PM");
@@ -56,7 +57,7 @@ test("manage view creates, edits, retargets, and archives a habit", async ({
     .click();
 
   await page.getByRole("link", { name: "TODAY" }).click();
-  await expect(page.getByText("WEEKLY 0/2")).toBeVisible();
+  await expect(page.getByText("THIS WEEK 0/2")).toBeVisible();
 
   await page.getByRole("link", { name: "MANAGE" }).click();
   await page

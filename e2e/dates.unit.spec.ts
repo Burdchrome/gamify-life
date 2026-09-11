@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
   countCompletionsThisWeek,
+  getCompletionsFetchCeiling,
   getCompletionsFetchFloor,
   getLocalDateIso,
   getWeekBounds,
@@ -115,6 +116,39 @@ test("weekly completion count includes only dates inside the bounds", () => {
     countCompletionsThisWeek(
       ["2026-08-16", "2026-08-17", "2026-08-20", "2026-08-23", "2026-08-24"],
       bounds,
+      "2026-08-23",
     ),
   ).toBe(3);
+});
+
+test("weekly completion count excludes a date later in the same week", () => {
+  // Issue #13: the count's ceiling is TODAY, not Sunday. A row dated later in
+  // the current week (e.g. a stray future-dated write) must not show up as
+  // done-this-week while today's checkbox is unchecked.
+  const bounds = { weekStart: "2026-09-07", weekEnd: "2026-09-13" } as const;
+
+  expect(
+    countCompletionsThisWeek(
+      ["2026-09-09", "2026-09-11", "2026-09-12"],
+      bounds,
+      "2026-09-11",
+    ),
+  ).toBe(2);
+});
+
+test("weekly completion count still counts today itself", () => {
+  const bounds = { weekStart: "2026-09-07", weekEnd: "2026-09-13" } as const;
+
+  expect(
+    countCompletionsThisWeek(["2026-09-11"], bounds, "2026-09-11"),
+  ).toBe(1);
+});
+
+test("fetch ceiling covers device today even when the server day trails by one", () => {
+  const deviceNow = new Date(2026, 8, 11, 0, 30);
+  const trailingServerNow = new Date(2026, 8, 10, 23, 30);
+
+  const ceiling = getCompletionsFetchCeiling(trailingServerNow);
+
+  expect(getLocalDateIso(deviceNow) <= ceiling).toBe(true);
 });

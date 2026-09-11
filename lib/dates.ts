@@ -54,12 +54,27 @@ export function listBackdateDates(now: Date): LocalDateIso[] {
   });
 }
 
+// Server-side fetch ceiling: nothing legitimate is dated past the device's
+// today, and the device sits at most a calendar day ahead of the server. +2
+// keeps margin; the client clamps precisely (issue #13).
+export function getCompletionsFetchCeiling(now: Date): LocalDateIso {
+  const ceiling = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  ceiling.setDate(ceiling.getDate() + 2);
+
+  return getLocalDateIso(ceiling);
+}
+
 export function countCompletionsThisWeek(
   completedOnDates: string[],
   bounds: WeekBounds,
+  today: LocalDateIso,
 ): number {
+  // Ceiling is TODAY, not the week's Sunday (issue #13): a row dated later in
+  // the current week must never read as already done.
+  const countCeiling = today <= bounds.weekEnd ? today : bounds.weekEnd;
+
   return completedOnDates.filter(
     (completedOn) =>
-      completedOn >= bounds.weekStart && completedOn <= bounds.weekEnd,
+      completedOn >= bounds.weekStart && completedOn <= countCeiling,
   ).length;
 }

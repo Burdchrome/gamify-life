@@ -6,6 +6,7 @@ import {
   getLocalDateIso,
   getWeekBounds,
 } from "@/lib/dates";
+import { isRestingWeekly } from "@/lib/habit-status";
 import { HabitCard, type Habit } from "./habit-card";
 import { OpsProgress } from "./ops-progress";
 
@@ -17,6 +18,7 @@ type DerivedTodayHabit = Habit & {
   isCompletedToday: boolean;
   weeklyCompletionCount: number;
   completedOnDates: string[];
+  isResting: boolean;
 };
 
 type TodayCompletionsProps = {
@@ -43,17 +45,35 @@ export function TodayCompletions({ habits }: TodayCompletionsProps) {
   const deviceNow = new Date();
   const today = getLocalDateIso(deviceNow);
   const weekBounds = getWeekBounds(deviceNow);
-  const derivedHabits = habits.map<DerivedTodayHabit>((habit) => ({
-    id: habit.id,
-    name: habit.name,
-    target_per_week: habit.target_per_week,
-    isCompletedToday: habit.completedOnDates.includes(today),
-    weeklyCompletionCount: countCompletionsThisWeek(
+  const derivedHabits = habits.map<DerivedTodayHabit>((habit) => {
+    const isCompletedToday = habit.completedOnDates.includes(today);
+    const weeklyCompletionCount = countCompletionsThisWeek(
       habit.completedOnDates,
       weekBounds,
-    ),
-    completedOnDates: habit.completedOnDates,
-  }));
+      today,
+    );
+
+    return {
+      id: habit.id,
+      name: habit.name,
+      kind: habit.kind,
+      target_per_week: habit.target_per_week,
+      isCompletedToday,
+      weeklyCompletionCount,
+      completedOnDates: habit.completedOnDates,
+      isResting: isRestingWeekly({
+        kind: habit.kind,
+        weeklyCompletionCount,
+        targetPerWeek: habit.target_per_week,
+        isCompletedToday,
+      }),
+    };
+  });
+  // Resting weekly habits met their target on earlier days: they render, but
+  // they are not today's ops (issue #13).
+  const opsHabitCount = derivedHabits.filter(
+    (habit) => !habit.isResting,
+  ).length;
   const completedCount = derivedHabits.filter(
     (habit) => habit.isCompletedToday,
   ).length;
@@ -74,6 +94,7 @@ export function TodayCompletions({ habits }: TodayCompletionsProps) {
       key={stateKey}
       habits={derivedHabits}
       initialCompletedCount={completedCount}
+      opsHabitCount={opsHabitCount}
     />
   );
 }
@@ -81,21 +102,23 @@ export function TodayCompletions({ habits }: TodayCompletionsProps) {
 function TodayCompletionsState({
   habits,
   initialCompletedCount,
+  opsHabitCount,
 }: {
   habits: DerivedTodayHabit[];
   initialCompletedCount: number;
+  opsHabitCount: number;
 }) {
   const [completedCount, setCompletedCount] = useState(initialCompletedCount);
 
   function adjustCompletedCount(delta: number) {
     setCompletedCount((currentCount) =>
-      Math.max(0, Math.min(habits.length, currentCount + delta)),
+      Math.max(0, Math.min(opsHabitCount, currentCount + delta)),
     );
   }
 
   return (
     <>
-      <OpsProgress completedCount={completedCount} habitCount={habits.length} />
+      <OpsProgress completedCount={completedCount} habitCount={opsHabitCount} />
       <div className="mt-4 h-px bg-cyan-divider" />
       <ul className="flex flex-col gap-2 py-5" aria-label="Today's habits">
         {habits.map((habit) => (
@@ -105,6 +128,7 @@ function TodayCompletionsState({
               initialIsCompletedToday={habit.isCompletedToday}
               initialWeeklyCompletionCount={habit.weeklyCompletionCount}
               completedOnDates={habit.completedOnDates}
+              isResting={habit.isResting}
               onTodayCompletionChange={adjustCompletedCount}
             />
           </li>

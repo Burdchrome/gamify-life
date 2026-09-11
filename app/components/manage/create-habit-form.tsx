@@ -4,15 +4,23 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { TargetPicker } from "./target-picker";
+import { type HabitKind } from "./types";
 import {
   HABIT_NAME_MAX_LENGTH,
   validateHabitName,
   validateWeeklyTarget,
 } from "./validation";
 
+const kindOptions: { value: HabitKind; label: string }[] = [
+  { value: "task", label: "TASK" },
+  { value: "daily", label: "DAILY" },
+  { value: "weekly", label: "WEEKLY" },
+];
+
 export function CreateHabitForm() {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [kind, setKind] = useState<HabitKind>("daily");
   const [targetPerWeek, setTargetPerWeek] = useState(4);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,8 +31,10 @@ export function CreateHabitForm() {
     const nameResult = validateHabitName(name);
     const targetResult = validateWeeklyTarget(targetPerWeek);
 
-    if (nameResult.error || targetResult.error) {
-      setErrorMessage(nameResult.error ?? targetResult.error);
+    if (nameResult.error || (kind !== "task" && targetResult.error)) {
+      setErrorMessage(
+        nameResult.error ?? (kind !== "task" ? targetResult.error : null),
+      );
       return;
     }
 
@@ -35,7 +45,10 @@ export function CreateHabitForm() {
       const supabase = createClient();
       const { error } = await supabase.from("habits").insert({
         name: nameResult.value,
-        target_per_week: targetPerWeek,
+        kind,
+        // A task has no weekly target; 1 satisfies the DB's 1-7 backstop and
+        // is never rendered for kind=task.
+        target_per_week: kind === "task" ? 1 : targetPerWeek,
       });
 
       if (error) {
@@ -50,6 +63,7 @@ export function CreateHabitForm() {
       }
 
       setName("");
+      setKind("daily");
       setTargetPerWeek(4);
       router.refresh();
     } catch (error: unknown) {
@@ -92,13 +106,46 @@ export function CreateHabitForm() {
           />
         </div>
 
-        <TargetPicker
-          id="create-weekly-target"
-          isDisabled={isSubmitting}
-          label="Weekly Target"
-          onChange={setTargetPerWeek}
-          value={targetPerWeek}
-        />
+        <fieldset className="flex flex-col gap-2" disabled={isSubmitting}>
+          <legend
+            className="font-orbitron text-[9px] font-bold uppercase tracking-[2px] text-cyan"
+            id="create-kind-label"
+          >
+            Type
+          </legend>
+          <div
+            aria-labelledby="create-kind-label"
+            className="grid grid-cols-3 gap-1"
+            role="group"
+          >
+            {kindOptions.map((option) => (
+              <button
+                aria-pressed={kind === option.value}
+                className={[
+                  "min-h-11 min-w-0 rounded-[4px] border px-0 font-orbitron text-[11px] font-bold uppercase tracking-[0px] transition disabled:cursor-not-allowed",
+                  kind === option.value
+                    ? "border-cyan bg-cyan text-ground"
+                    : "border-cyan-divider bg-ground text-text-dim hover:border-cyan hover:text-cyan",
+                ].join(" ")}
+                key={option.value}
+                onClick={() => setKind(option.value)}
+                type="button"
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
+        {kind === "task" ? null : (
+          <TargetPicker
+            id="create-weekly-target"
+            isDisabled={isSubmitting}
+            label="Weekly Target"
+            onChange={setTargetPerWeek}
+            value={targetPerWeek}
+          />
+        )}
 
         {errorMessage ? (
           <p

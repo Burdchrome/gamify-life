@@ -1,4 +1,4 @@
-import { type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 type TestAccount = {
@@ -132,6 +132,36 @@ async function deleteHabitRows(supabase: SupabaseClient, accountLabel: string) {
   if (error) {
     throw new Error(`Habit cleanup failed for ${accountLabel}: ${error.message}`);
   }
+}
+
+// The card's writes are optimistic: the UI flips before the request lands, so
+// a reload or follow-up click right after an assertion can kill an in-flight
+// write (the trap completions.spec documents). Poll the DB row to know a
+// toggle actually landed before acting again.
+export async function expectCompletionRow(
+  supabase: SupabaseClient,
+  habitName: string,
+  completedOn: string,
+  shouldExist: boolean,
+) {
+  await expect
+    .poll(
+      async () => {
+        const { data, error } = await supabase
+          .from("completions")
+          .select("id, habits!inner(name)")
+          .eq("habits.name", habitName)
+          .eq("completed_on", completedOn);
+        if (error) {
+          throw new Error(
+            `Completion poll failed for ${habitName}: ${error.message}`,
+          );
+        }
+        return data.length > 0;
+      },
+      { timeout: 10_000 },
+    )
+    .toBe(shouldExist);
 }
 
 function getRequiredEnv(name: string) {

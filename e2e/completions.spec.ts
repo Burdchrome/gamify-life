@@ -1,7 +1,16 @@
 import { expect, test } from "@playwright/test";
-import { signInTestUser } from "./helpers";
+import { getLocalDateIso } from "../lib/dates";
+import {
+  createSignedInSupabaseClient,
+  expectCompletionRow,
+  signInTestUser,
+  testUserAccount,
+} from "./helpers";
 
 test("habit completion toggles optimistically and persists", async ({ page }) => {
+  const supabase = await createSignedInSupabaseClient(testUserAccount);
+  const today = getLocalDateIso(new Date());
+
   await page.goto("/login");
   await signInTestUser(page);
 
@@ -11,6 +20,7 @@ test("habit completion toggles optimistically and persists", async ({ page }) =>
   await expect(hydrate).toHaveAttribute("aria-pressed", "true");
   await expect(hydrate.getByText("✓")).toBeVisible();
   await expect(page.getByText("1/2 OPS COMPLETE")).toBeVisible();
+  await expectCompletionRow(supabase, "HYDRATE", today, true);
 
   await page.reload();
 
@@ -24,6 +34,7 @@ test("habit completion toggles optimistically and persists", async ({ page }) =>
   await expect(hydrate).toHaveAttribute("aria-pressed", "false");
   await expect(hydrate.getByText("✓")).toHaveCount(0);
   await expect(page.getByText("0/2 OPS COMPLETE")).toBeVisible();
+  await expectCompletionRow(supabase, "HYDRATE", today, false);
 
   await page.reload();
 
@@ -34,6 +45,9 @@ test("habit completion toggles optimistically and persists", async ({ page }) =>
 });
 
 test("failed write reverts the toggle and surfaces an error", async ({ page }) => {
+  const supabase = await createSignedInSupabaseClient(testUserAccount);
+  const today = getLocalDateIso(new Date());
+
   await page.goto("/login");
   await signInTestUser(page);
 
@@ -53,13 +67,15 @@ test("failed write reverts the toggle and surfaces an error", async ({ page }) =
   await expect(hydrate).toHaveAttribute("aria-pressed", "true");
   await expect(hydrate.getByText("SYNC FAILED - RETRY")).toHaveCount(0);
   await expect(page.getByText("1/2 OPS COMPLETE")).toBeVisible();
+  await expectCompletionRow(supabase, "HYDRATE", today, true);
 
   // Seeding runs once per suite and data specs share state (alphabetical file
-  // order: completions → manage → today), so leave HYDRATE un-completed.
-  // Reload after the toggle: asserting only the optimistic state lets the test
-  // end before the DELETE reaches Supabase, leaking the completion to today.spec.
+  // order: backdate → completions → manage → rest → task → today), so leave
+  // HYDRATE un-completed — and wait for the DELETE to land in the DB before
+  // reloading, or the reload kills it and leaks the completion to today.spec.
   await hydrate.click();
   await expect(hydrate).toHaveAttribute("aria-pressed", "false");
+  await expectCompletionRow(supabase, "HYDRATE", today, false);
   await page.reload();
   const hydrateAfter = page.getByRole("button", { name: /HYDRATE/ });
   await expect(hydrateAfter).toHaveAttribute("aria-pressed", "false");

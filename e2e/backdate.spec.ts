@@ -1,11 +1,13 @@
 import { expect, test } from "@playwright/test";
 import {
   countCompletionsThisWeek,
+  getLocalDateIso,
   getWeekBounds,
   listBackdateDates,
 } from "../lib/dates";
 import {
   createSignedInSupabaseClient,
+  expectCompletionRow,
   signInTestUser,
   testUserAccount,
 } from "./helpers";
@@ -24,23 +26,27 @@ test("backdating yesterday counts toward the week without checking today", async
   const hydrateItem = page.getByRole("listitem").filter({ hasText: "HYDRATE" });
 
   await expect(hydrateCard).toHaveAttribute("aria-pressed", "false");
-  await expect(hydrateCard.getByText("WEEKLY 0/5")).toBeVisible();
+  await expect(hydrateCard.getByText("THIS WEEK 0/5")).toBeVisible();
+
+  // A Monday device day puts yesterday in the previous week; derive the
+  // expectation with the same helpers the app uses instead of hardcoding 1.
+  const now = new Date();
+  const [yesterday] = listBackdateDates(now);
+  const supabase = await createSignedInSupabaseClient(testUserAccount);
 
   await hydrateItem.getByRole("button", { name: "LOG A PAST DAY" }).click();
   const yesterdayOption = hydrateItem.getByTestId("backdate-day").first();
   await expect(yesterdayOption).toBeEnabled();
   await yesterdayOption.click();
-
-  // A Monday device day puts yesterday in the previous week; derive the
-  // expectation with the same helpers the app uses instead of hardcoding 1.
-  const [yesterday] = listBackdateDates(new Date());
+  await expectCompletionRow(supabase, "HYDRATE", yesterday, true);
   const expectedWeekly = countCompletionsThisWeek(
     [yesterday],
-    getWeekBounds(new Date()),
+    getWeekBounds(now),
+    getLocalDateIso(now),
   );
 
   await expect(
-    hydrateCard.getByText(`WEEKLY ${expectedWeekly}/5`),
+    hydrateCard.getByText(`THIS WEEK ${expectedWeekly}/5`),
   ).toBeVisible();
   await expect(hydrateCard).toHaveAttribute("aria-pressed", "false");
 
@@ -48,7 +54,7 @@ test("backdating yesterday counts toward the week without checking today", async
 
   const hydrateCardAfter = page.getByRole("button", { name: /HYDRATE/ });
   await expect(
-    hydrateCardAfter.getByText(`WEEKLY ${expectedWeekly}/5`),
+    hydrateCardAfter.getByText(`THIS WEEK ${expectedWeekly}/5`),
   ).toBeVisible();
   await expect(hydrateCardAfter).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByText("0/2 OPS COMPLETE")).toBeVisible();
@@ -58,7 +64,6 @@ test("backdating yesterday counts toward the week without checking today", async
   await hydrateItem.getByRole("button", { name: "LOG A PAST DAY" }).click();
   await expect(hydrateItem.getByTestId("backdate-day").first()).toBeDisabled();
 
-  const supabase = await createSignedInSupabaseClient(testUserAccount);
   const { error } = await supabase
     .from("completions")
     .delete()

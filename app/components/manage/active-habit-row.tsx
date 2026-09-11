@@ -23,8 +23,10 @@ export function ActiveHabitRow({ habit }: ActiveHabitRowProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const isPending = isSaving || isArchiving;
+  const isTask = habit.kind === "task";
   const hasChanges =
-    name.trim() !== habit.name || targetPerWeek !== habit.target_per_week;
+    name.trim() !== habit.name ||
+    (!isTask && targetPerWeek !== habit.target_per_week);
 
   async function saveHabit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,8 +34,8 @@ export function ActiveHabitRow({ habit }: ActiveHabitRowProps) {
     const nameResult = validateHabitName(name);
     const targetResult = validateWeeklyTarget(targetPerWeek);
 
-    if (nameResult.error || targetResult.error) {
-      setErrorMessage(nameResult.error ?? targetResult.error);
+    if (nameResult.error || (!isTask && targetResult.error)) {
+      setErrorMessage(nameResult.error ?? (!isTask ? targetResult.error : null));
       return;
     }
 
@@ -44,10 +46,11 @@ export function ActiveHabitRow({ habit }: ActiveHabitRowProps) {
       const supabase = createClient();
       const { error } = await supabase
         .from("habits")
-        .update({
-          name: nameResult.value,
-          target_per_week: targetPerWeek,
-        })
+        .update(
+          isTask
+            ? { name: nameResult.value }
+            : { name: nameResult.value, target_per_week: targetPerWeek },
+        )
         .eq("id", habit.id)
         .eq("is_archived", false);
 
@@ -143,13 +146,15 @@ export function ActiveHabitRow({ habit }: ActiveHabitRowProps) {
           />
         </div>
 
-        <TargetPicker
-          id={"weekly-target-" + habit.id}
-          isDisabled={isPending}
-          label="Weekly Target"
-          onChange={setTargetPerWeek}
-          value={targetPerWeek}
-        />
+        {isTask ? null : (
+          <TargetPicker
+            id={"weekly-target-" + habit.id}
+            isDisabled={isPending}
+            label="Weekly Target"
+            onChange={setTargetPerWeek}
+            value={targetPerWeek}
+          />
+        )}
 
         {errorMessage ? (
           <p
