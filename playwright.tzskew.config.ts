@@ -42,7 +42,7 @@ export default defineConfig({
     },
     {
       name: "chromium data skewed",
-      testMatch: /completions\.spec\.ts/,
+      testMatch: /(completions|backdate)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
       dependencies: ["setup db"],
     },

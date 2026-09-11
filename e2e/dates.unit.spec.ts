@@ -4,6 +4,7 @@ import {
   getCompletionsFetchFloor,
   getLocalDateIso,
   getWeekBounds,
+  listBackdateDates,
 } from "../lib/dates";
 
 test("local date keeps an 11:50pm tap on the same local day", () => {
@@ -69,6 +70,42 @@ test("fetch floor covers a device week even when the server day trails by one", 
   const floor = getCompletionsFetchFloor(trailingServerNow);
 
   expect(floor <= deviceWeek.weekStart).toBe(true);
+});
+
+test("backdate dates are the 7 days before today, yesterday first", () => {
+  const midSeptember = new Date(2026, 8, 11, 12);
+
+  expect(listBackdateDates(midSeptember)).toEqual([
+    "2026-09-10",
+    "2026-09-09",
+    "2026-09-08",
+    "2026-09-07",
+    "2026-09-06",
+    "2026-09-05",
+    "2026-09-04",
+  ]);
+});
+
+test("backdate dates never include today or a future date", () => {
+  const now = new Date(2026, 8, 11, 23, 50);
+  const today = getLocalDateIso(now);
+
+  for (const date of listBackdateDates(now)) {
+    expect(date < today).toBe(true);
+  }
+});
+
+test("backdate dates stay above the server fetch floor even with a day of clock skew", () => {
+  // Worst case: server clock trails the device by a calendar day. Every date
+  // the picker can write must still be shipped back by the server's floor,
+  // or a just-backdated completion would vanish on the next load.
+  const deviceNow = new Date(2026, 8, 11, 0, 30);
+  const trailingServerNow = new Date(2026, 8, 10, 23, 30);
+
+  const floor = getCompletionsFetchFloor(trailingServerNow);
+  for (const date of listBackdateDates(deviceNow)) {
+    expect(date >= floor).toBe(true);
+  }
 });
 
 test("weekly completion count includes only dates inside the bounds", () => {

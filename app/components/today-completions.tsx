@@ -16,6 +16,7 @@ export type TodayHabit = Habit & {
 type DerivedTodayHabit = Habit & {
   isCompletedToday: boolean;
   weeklyCompletionCount: number;
+  completedOnDates: string[];
 };
 
 type TodayCompletionsProps = {
@@ -51,6 +52,7 @@ export function TodayCompletions({ habits }: TodayCompletionsProps) {
       habit.completedOnDates,
       weekBounds,
     ),
+    completedOnDates: habit.completedOnDates,
   }));
   const completedCount = derivedHabits.filter(
     (habit) => habit.isCompletedToday,
@@ -102,6 +104,7 @@ function TodayCompletionsState({
               habit={habit}
               initialIsCompletedToday={habit.isCompletedToday}
               initialWeeklyCompletionCount={habit.weeklyCompletionCount}
+              completedOnDates={habit.completedOnDates}
               onTodayCompletionChange={adjustCompletedCount}
             />
           </li>

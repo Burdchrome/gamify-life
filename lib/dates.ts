@@ -40,6 +40,20 @@ export function getCompletionsFetchFloor(now: Date): LocalDateIso {
   return getLocalDateIso(floor);
 }
 
+// The backdate picker offers 7 days: deep enough to catch anything the evening
+// nudge misses, and safely inside the server's 9-day fetch floor even when the
+// server clock trails the device by a calendar day (issue #10).
+export const backdateDayCount = 7;
+
+export function listBackdateDates(now: Date): LocalDateIso[] {
+  return Array.from({ length: backdateDayCount }, (_, index) => {
+    const pastDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    pastDay.setDate(pastDay.getDate() - (index + 1));
+
+    return getLocalDateIso(pastDay);
+  });
+}
+
 export function countCompletionsThisWeek(
   completedOnDates: string[],
   bounds: WeekBounds,

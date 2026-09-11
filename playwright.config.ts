@@ -51,7 +51,7 @@ export default defineConfig({
     },
     {
       name: "chromium data",
-      testMatch: /(today|completions|manage)\.spec\.ts/,
+      testMatch: /(today|completions|manage|backdate)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
       dependencies: ["setup db"],
     },
