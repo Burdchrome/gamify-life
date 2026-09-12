@@ -1,6 +1,6 @@
 # Architecture Brief — gamify-life v2 (loop one)
 
-*Current-state truth as of 2026-08-18. One page. The picture:*
+*Current-state truth as of 2026-09-11. One page. The picture:*
 
 ![Architecture](architecture.drawio.png)
 
@@ -16,6 +16,16 @@
    to Supabase on every request.
 3. **Supabase** — hosted Postgres (`habits`, `completions` tables) plus Auth
    (email + password, JWT session cookies). The only place data lives.
+
+Every habit carries a **kind** (issues #9/#13, born from real use): `task`
+(done once — completing archives it into the existing archive flow, with an
+un-tap grace window before the next load), `daily` (repeats every day; the
+checkbox means *done today* and the weekly number is an adjustable quota
+rendered as quiet progress), `weekly` (genuinely N-per-week; once the target
+is met on an earlier day the card rests — dimmed, untappable, out of the
+day's ops count — until the device-local Monday). A tap can also be
+**backdated** (#10): a secondary control logs "done on" one of the past 7
+days through the same device-dated write path as a plain tap.
 
 ## How a request flows
 
@@ -59,8 +69,10 @@ an 11:50pm tap counts for today, not tomorrow-in-UTC. Weeks start Monday.
 On read, the server never computes "today" (its clock is UTC and can sit a
 calendar day off the device — issue #8, where an evening tap unchecked
 itself on refresh): it ships a padded window of raw completion dates
-(`getCompletionsFetchFloor`) and the client derives today/week after
-hydration (`today-completions.tsx`). Guards: the near-midnight unit tests run
+(`getCompletionsFetchFloor` + a matching ceiling, issue #13) and the client
+derives today/week after hydration (`today-completions.tsx`). The weekly
+count's upper bound is **today, not Sunday** — a row dated later in the
+current week can never read as already done. Guards: the near-midnight unit tests run
 pinned west-of-UTC so the trap case can never silently skip, and
 `npm run test:e2e:tzskew` boots the dev server on a clock a full calendar day
 off the browser's (`playwright.tzskew.config.ts` + `e2e/tz-skew.cjs`) and
