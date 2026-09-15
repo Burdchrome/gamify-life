@@ -73,7 +73,12 @@ async function deleteTaskRows(supabase: SupabaseClient, taskName: string) {
 // cleanup runs after every test, pass or fail, not just on the happy path.
 test.afterEach(async () => {
   const supabase = await createSignedInSupabaseClient(testUserAccount);
-  for (const taskName of ["PAY RENT", "RETURN LIBRARY BOOK", "CALL DENTIST"]) {
+  for (const taskName of [
+    "PAY RENT",
+    "RETURN LIBRARY BOOK",
+    "CALL DENTIST",
+    "FILE TAXES",
+  ]) {
     await deleteTaskRows(supabase, taskName);
   }
 });
@@ -182,6 +187,56 @@ test("a task backdated to a past day archives without counting toward today's op
   ).toHaveCount(0);
   await expect(page.getByText("0/2 OPS COMPLETE")).toBeVisible();
 
+});
+
+// Issue #9's failure edge: the un-tap pair is two writes (un-archive, then
+// delete the completion). If it breaks between them, the task must stay
+// recoverable from Today — never stranded archived with zero completion rows,
+// which neither of Today's queries can see and Manage cannot restore.
+test("a failed un-tap write leaves the task recoverable, not stranded", async ({
+  page,
+}) => {
+  const supabase = await createSignedInSupabaseClient(testUserAccount);
+  await page.goto("/login");
+  await signInTestUser(page);
+
+  await page.getByRole("link", { name: "MANAGE" }).click();
+  await page.getByLabel("Protocol Name").fill("FILE TAXES");
+  await page.getByRole("button", { name: "TASK", exact: true }).click();
+  await page.getByRole("button", { name: "UPLOAD", exact: true }).click();
+  await expect(
+    page.getByRole("article", { name: "Active protocol FILE TAXES" }),
+  ).toBeVisible();
+
+  await page.getByRole("link", { name: "TODAY" }).click();
+  const taskCard = page.getByRole("button", { name: /FILE TAXES/ });
+  await taskCard.click();
+  await expect(taskCard).toHaveAttribute("aria-pressed", "true");
+  await expectTaskArchivedState(supabase, "FILE TAXES", true);
+
+  // Settle on server truth first: the tap's router.refresh() remounts the
+  // card when it lands, and a remount mid-test would wipe the error state
+  // this test is about to assert on.
+  await page.reload();
+  await expect(taskCard).toHaveAttribute("aria-pressed", "true");
+
+  // Sever the un-archive leg only: habit PATCHes fail, everything else flows.
+  await page.route("**/rest/v1/habits*", (route) =>
+    route.request().method() === "PATCH" ? route.abort() : route.fallback(),
+  );
+  await taskCard.click();
+  await expect(taskCard.getByText("SYNC FAILED - RETRY")).toBeVisible();
+  // The optimistic un-tap reverted: still checked, still archived, and the
+  // completion row survived — nothing was half-deleted.
+  await expect(taskCard).toHaveAttribute("aria-pressed", "true");
+  await expectTaskArchivedState(supabase, "FILE TAXES", true);
+
+  // Link restored: the retry is one ordinary tap.
+  await page.unroute("**/rest/v1/habits*");
+  await taskCard.click();
+  await expect(taskCard).toHaveAttribute("aria-pressed", "false");
+  await expectTaskArchivedState(supabase, "FILE TAXES", false);
+  await expect(page.getByText("0/3 OPS COMPLETE")).toBeVisible();
 });
 
 // Issue #15: the ⟲ control says what it is before you tap it, and a backdated

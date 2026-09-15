@@ -75,6 +75,33 @@ export function HabitCard({
     onTodayCompletionChange(delta);
 
     const supabase = createClient();
+
+    // Write order keeps every mid-pair failure recoverable from Today: the
+    // completion row is written while ACTIVE state brackets it (insert before
+    // archiving, un-archive before deleting). The reverse un-tap order could
+    // strand a task archived with zero completion rows — invisible to both of
+    // Today's queries and restorable nowhere in the UI.
+    if (habit.kind === "task" && !nextIsCompletedToday) {
+      const { error: unarchiveError } = await supabase
+        .from("habits")
+        .update({ is_archived: false })
+        .eq("id", habit.id);
+
+      if (unarchiveError) {
+        console.error("Supabase task unarchive failed", {
+          habitId: habit.id,
+          code: unarchiveError.code,
+          message: unarchiveError.message,
+        });
+        setIsCompletedToday(previousIsCompletedToday);
+        setWeeklyCompletionCount(previousWeeklyCompletionCount);
+        onTodayCompletionChange(-delta);
+        setSyncError("SYNC FAILED - RETRY");
+        setIsSyncing(false);
+        return;
+      }
+    }
+
     const { error } = nextIsCompletedToday
       ? await supabase.from("completions").insert({
           habit_id: habit.id,
@@ -107,12 +134,13 @@ export function HabitCard({
       return;
     }
 
-    // A task is done once: completing archives it, un-completing un-archives,
-    // so a mis-tap stays recoverable (issue #9).
-    if (habit.kind === "task") {
+    // A task is done once: completing archives it, un-completing un-archives
+    // (above, before the delete), so a same-day mis-tap stays recoverable
+    // (issue #9).
+    if (habit.kind === "task" && nextIsCompletedToday) {
       const { error: archiveError } = await supabase
         .from("habits")
-        .update({ is_archived: nextIsCompletedToday })
+        .update({ is_archived: true })
         .eq("id", habit.id);
 
       if (archiveError) {
@@ -120,7 +148,7 @@ export function HabitCard({
         // surface the half-applied pair instead of reverting over it.
         console.error("Supabase task archive toggle failed", {
           habitId: habit.id,
-          isArchived: nextIsCompletedToday,
+          isArchived: true,
           code: archiveError.code,
           message: archiveError.message,
         });
