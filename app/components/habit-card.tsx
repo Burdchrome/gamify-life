@@ -55,6 +55,7 @@ export function HabitCard({
   const [isSyncing, setIsSyncing] = useState(false);
   const [isBackdateOpen, setIsBackdateOpen] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [backdateNotice, setBackdateNotice] = useState<string | null>(null);
 
   async function toggleCompletion() {
     if (isSyncing) {
@@ -127,13 +128,6 @@ export function HabitCard({
         setIsSyncing(false);
         return;
       }
-
-      if (nextIsCompletedToday) {
-        // No refresh: the server drops archived tasks from Today, which would
-        // end the un-tap grace window instantly. It clears on the next load.
-        setIsSyncing(false);
-        return;
-      }
     }
 
     setIsSyncing(false);
@@ -187,6 +181,16 @@ export function HabitCard({
         setIsSyncing(false);
         return;
       }
+
+      // A beat of feedback before the refresh clears the card (issue #15):
+      // without it, the first-ever backdate reads as the task vanishing
+      // unexplained. isSyncing stays true so nothing else fires meanwhile.
+      setIsBackdateOpen(false);
+      setBackdateNotice("LOGGED - ARCHIVED");
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      // Cleared explicitly: a card that survives the refresh (task already
+      // completed today, #14) would otherwise wear the notice forever.
+      setBackdateNotice(null);
     }
 
     setIsBackdateOpen(false);
@@ -293,12 +297,17 @@ export function HabitCard({
               {syncError}
             </span>
           ) : null}
+          {backdateNotice ? (
+            <span className="relative z-10 mt-2 block truncate font-rajdhani text-[11px] font-semibold uppercase tracking-[0.5px] text-cyan">
+              {backdateNotice}
+            </span>
+          ) : null}
         </button>
         <button
           aria-expanded={isBackdateOpen}
           aria-label="LOG A PAST DAY"
           className={[
-            "relative z-10 flex w-9 shrink-0 items-center justify-center border-l font-rajdhani text-[14px] font-bold",
+            "relative z-10 flex w-9 shrink-0 flex-col items-center justify-center gap-0.5 border-l font-rajdhani text-[14px] font-bold",
             isBackdateOpen
               ? "border-cyan/20 bg-cyan/10 text-cyan"
               : "border-white/[0.06] text-text-muted transition hover:text-cyan",
@@ -307,7 +316,12 @@ export function HabitCard({
           onClick={() => setIsBackdateOpen(!isBackdateOpen)}
           type="button"
         >
-          ⟲
+          <span aria-hidden="true">⟲</span>
+          {/* The glyph alone was undiscoverable (issue #15) — a quiet visible
+              label so the control is legible before the first tap. */}
+          <span className="text-[8px] font-semibold leading-none tracking-[1px]">
+            PAST
+          </span>
         </button>
       </div>
       {isBackdateOpen ? (

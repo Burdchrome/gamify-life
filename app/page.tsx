@@ -15,12 +15,17 @@ type HabitRow = {
   name: string;
   kind: "task" | "daily" | "weekly";
   target_per_week: number;
+  is_archived: boolean;
+  created_at: string;
   completions: { completed_on: string }[] | null;
 };
 
 export default async function Home() {
   const userId = await requireUserId("home");
   const supabase = await createClient();
+  const fetchNow = new Date();
+  const completionsFetchFloor = getCompletionsFetchFloor(fetchNow);
+  const completionsFetchCeiling = getCompletionsFetchCeiling(fetchNow);
 
   // The server never interprets "today" — it can be a calendar day off the
   // device (issue #8). It ships a padded window of raw completion dates; the
@@ -30,27 +35,80 @@ export default async function Home() {
     error: habitsError,
   } = await supabase
     .from("habits")
-    .select("id, name, kind, target_per_week, completions(completed_on)")
+    .select(
+      "id, name, kind, target_per_week, is_archived, created_at, completions(completed_on)",
+    )
     .eq("user_id", userId)
     .eq("is_archived", false)
-    .gte("completions.completed_on", getCompletionsFetchFloor(new Date()))
-    .lte("completions.completed_on", getCompletionsFetchCeiling(new Date()))
+    .gte("completions.completed_on", completionsFetchFloor)
+    .lte("completions.completed_on", completionsFetchCeiling)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+
+  // A task completed today stays one of Today's ops after archive (issue #14).
+  const {
+    data: archivedTaskRows,
+    error: archivedTasksError,
+  } = await supabase
+    .from("habits")
+    .select(
+      "id, name, kind, target_per_week, is_archived, created_at, completions!inner(completed_on)",
+    )
+    .eq("user_id", userId)
+    .eq("kind", "task")
+    .eq("is_archived", true)
+    .gte("completions.completed_on", completionsFetchFloor)
+    .lte("completions.completed_on", completionsFetchCeiling)
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });
 
   if (habitsError) {
     console.error("Supabase habits fetch failed", { message: habitsError.message });
   }
+  if (archivedTasksError) {
+    console.error("Supabase archived tasks fetch failed", {
+      message: archivedTasksError.message,
+    });
+  }
 
-  const habits = ((habitRows ?? []) as HabitRow[]).map<TodayHabit>((habit) => ({
-    id: habit.id,
-    name: habit.name,
-    kind: habit.kind,
-    target_per_week: habit.target_per_week,
-    completedOnDates: (habit.completions ?? []).map(
-      (completion) => completion.completed_on,
-    ),
-  }));
+  const habitRowsById = new Map<string, HabitRow>();
+  for (const habit of [
+    ...((habitRows ?? []) as HabitRow[]),
+    ...((archivedTaskRows ?? []) as HabitRow[]),
+  ]) {
+    // First read wins if archive state flips between non-transactional reads (issue #14).
+    if (!habitRowsById.has(habit.id)) {
+      habitRowsById.set(habit.id, habit);
+    }
+  }
+
+  const habits = Array.from(habitRowsById.values())
+    .sort((firstHabit, secondHabit) => {
+      if (firstHabit.created_at < secondHabit.created_at) {
+        return -1;
+      }
+      if (firstHabit.created_at > secondHabit.created_at) {
+        return 1;
+      }
+      if (firstHabit.id < secondHabit.id) {
+        return -1;
+      }
+      if (firstHabit.id > secondHabit.id) {
+        return 1;
+      }
+
+      return 0;
+    })
+    .map<TodayHabit>((habit) => ({
+      id: habit.id,
+      name: habit.name,
+      kind: habit.kind,
+      target_per_week: habit.target_per_week,
+      isArchived: habit.is_archived,
+      completedOnDates: (habit.completions ?? []).map(
+        (completion) => completion.completed_on,
+      ),
+    }));
 
   return (
     <main className="min-h-dvh bg-ground text-text-primary">
@@ -90,7 +148,7 @@ export default async function Home() {
             </div>
           </div>
         </header>
-        {habitsError ? (
+        {habitsError || archivedTasksError ? (
           <>
             <div className="h-px bg-cyan-divider" />
             <TodayError />

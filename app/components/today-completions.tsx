@@ -11,10 +11,12 @@ import { HabitCard, type Habit } from "./habit-card";
 import { OpsProgress } from "./ops-progress";
 
 export type TodayHabit = Habit & {
+  isArchived: boolean;
   completedOnDates: string[];
 };
 
 type DerivedTodayHabit = Habit & {
+  isArchived: boolean;
   isCompletedToday: boolean;
   weeklyCompletionCount: number;
   completedOnDates: string[];
@@ -45,30 +47,37 @@ export function TodayCompletions({ habits }: TodayCompletionsProps) {
   const deviceNow = new Date();
   const today = getLocalDateIso(deviceNow);
   const weekBounds = getWeekBounds(deviceNow);
-  const derivedHabits = habits.map<DerivedTodayHabit>((habit) => {
-    const isCompletedToday = habit.completedOnDates.includes(today);
-    const weeklyCompletionCount = countCompletionsThisWeek(
-      habit.completedOnDates,
-      weekBounds,
-      today,
-    );
+  const derivedHabits = habits
+    .map<DerivedTodayHabit>((habit) => {
+      const isCompletedToday = habit.completedOnDates.includes(today);
+      const weeklyCompletionCount = countCompletionsThisWeek(
+        habit.completedOnDates,
+        weekBounds,
+        today,
+      );
 
-    return {
-      id: habit.id,
-      name: habit.name,
-      kind: habit.kind,
-      target_per_week: habit.target_per_week,
-      isCompletedToday,
-      weeklyCompletionCount,
-      completedOnDates: habit.completedOnDates,
-      isResting: isRestingWeekly({
+      return {
+        id: habit.id,
+        name: habit.name,
         kind: habit.kind,
-        weeklyCompletionCount,
-        targetPerWeek: habit.target_per_week,
+        target_per_week: habit.target_per_week,
+        isArchived: habit.isArchived,
         isCompletedToday,
-      }),
-    };
-  });
+        weeklyCompletionCount,
+        completedOnDates: habit.completedOnDates,
+        isResting: isRestingWeekly({
+          kind: habit.kind,
+          weeklyCompletionCount,
+          targetPerWeek: habit.target_per_week,
+          isCompletedToday,
+        }),
+      };
+    })
+    // Device-local today is the only day where an archived task still counts (issue #14).
+    .filter(
+      (habit) =>
+        !habit.isArchived || (habit.kind === "task" && habit.isCompletedToday),
+    );
   // Resting weekly habits met their target on earlier days: they render, but
   // they are not today's ops (issue #13).
   const opsHabitCount = derivedHabits.filter(
