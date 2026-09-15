@@ -18,11 +18,11 @@ export default async function LoginPage() {
     <main className="min-h-dvh bg-ground text-text-primary">
       <div className="scanline-overlay" aria-hidden="true" />
       <section className="mx-auto flex min-h-dvh w-full max-w-[480px] items-center px-5 py-6 sm:px-6">
-        <div className="w-full rounded-[8px] border border-cyan-divider bg-surface px-5 py-6 shadow-none">
+        <div className="w-full rounded-[4px] border border-cyan-divider bg-surface px-5 py-6 shadow-none">
           <p className="font-orbitron text-[11px] font-bold uppercase tracking-[4px] text-cyan">
             AUTH://gate
           </p>
-          <h1 className="mt-3 font-orbitron text-2xl font-bold uppercase text-text-primary">
+          <h1 className="mt-3 font-rajdhani text-2xl font-bold uppercase tracking-[0.5px] text-text-primary">
             Runner Access
           </h1>
           <p className="mt-3 font-rajdhani text-base font-semibold text-text-dim">

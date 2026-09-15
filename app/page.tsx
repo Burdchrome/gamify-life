@@ -131,14 +131,14 @@ export default async function Home() {
               </p>
               <div className="mt-3 flex items-center justify-end gap-2">
                 <Link
-                  className="inline-flex min-h-11 items-center rounded-[8px] border border-cyan-divider px-3 font-orbitron text-[9px] font-bold uppercase tracking-[2px] text-cyan transition hover:border-cyan"
+                  className="inline-flex min-h-11 items-center rounded-[4px] border border-cyan-divider px-3 font-orbitron text-[9px] font-bold uppercase tracking-[2px] text-cyan transition hover:border-cyan"
                   href="/manage"
                 >
                   MANAGE
                 </Link>
                 <form action={signOut}>
                   <button
-                    className="min-h-11 rounded-[8px] border border-cyan-divider px-3 font-orbitron text-[9px] font-bold uppercase tracking-[2px] text-cyan transition hover:border-cyan disabled:text-text-muted"
+                    className="min-h-11 rounded-[4px] border border-cyan-divider px-3 font-orbitron text-[9px] font-bold uppercase tracking-[2px] text-cyan transition hover:border-cyan disabled:text-text-muted"
                     type="submit"
                   >
                     DISCONNECT

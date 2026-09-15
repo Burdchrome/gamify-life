@@ -79,7 +79,7 @@ export function CreateHabitForm() {
   return (
     <form
       aria-label="Create protocol"
-      className="rounded-[8px] border border-cyan-divider bg-surface p-4"
+      className="rounded-[4px] border border-cyan-divider bg-surface p-4"
       onSubmit={createHabit}
     >
       <p className="font-orbitron text-[10px] font-bold uppercase tracking-[3px] text-cyan">
@@ -94,7 +94,7 @@ export function CreateHabitForm() {
             Protocol Name
           </label>
           <input
-            className="min-h-12 rounded-[8px] border border-cyan-divider bg-ground px-4 font-rajdhani text-lg font-semibold uppercase tracking-[0.5px] text-text-primary outline-none transition placeholder:text-text-muted focus:border-cyan disabled:cursor-not-allowed disabled:text-text-muted"
+            className="min-h-12 rounded-[4px] border border-cyan-divider bg-ground px-4 font-rajdhani text-lg font-semibold uppercase tracking-[0.5px] text-text-primary outline-none transition placeholder:text-text-muted focus:border-cyan disabled:cursor-not-allowed disabled:text-text-muted"
             disabled={isSubmitting}
             id="create-habit-name"
             maxLength={HABIT_NAME_MAX_LENGTH}
@@ -157,7 +157,7 @@ export function CreateHabitForm() {
         ) : null}
 
         <button
-          className="min-h-12 rounded-[8px] border border-cyan bg-cyan px-4 font-orbitron text-xs font-bold uppercase tracking-[3px] text-ground transition hover:bg-ground hover:text-cyan disabled:cursor-not-allowed disabled:border-cyan-divider disabled:bg-ground disabled:text-text-muted"
+          className="min-h-12 rounded-[4px] border border-cyan bg-cyan px-4 font-orbitron text-xs font-bold uppercase tracking-[3px] text-ground transition hover:bg-ground hover:text-cyan disabled:cursor-not-allowed disabled:border-cyan-divider disabled:bg-ground disabled:text-text-muted"
           disabled={isSubmitting}
           type="submit"
         >

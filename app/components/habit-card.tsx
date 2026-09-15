@@ -207,7 +207,7 @@ export function HabitCard({
   const displayedWeeklyCount =
     habit.kind === "weekly" ? completedSegmentCount : weeklyCompletionCount;
   const cardShellClassName = [
-    "relative flex min-h-11 w-full overflow-hidden rounded-[4px]",
+    "relative flex min-h-11 w-full overflow-hidden rounded-[4px] transition-colors duration-300",
     isResting
       ? "border border-white/[0.06] bg-white/[0.02] opacity-55"
       : isCompletedToday
@@ -221,7 +221,7 @@ export function HabitCard({
       <div className={cardShellClassName}>
         <button
           aria-pressed={isCompletedToday}
-          className="relative min-w-0 flex-1 px-[14px] py-3 text-left"
+          className="relative min-w-0 flex-1 px-[14px] py-3 text-left transition-colors duration-300 active:bg-white/[0.03]"
           disabled={isSyncing || isResting}
           onClick={toggleCompletion}
           type="button"
@@ -229,7 +229,7 @@ export function HabitCard({
           {isResting ? null : (
             <span
               className={[
-                "absolute right-[14px] top-3 z-10 flex h-[18px] w-[18px] items-center justify-center font-rajdhani text-[14px] font-bold leading-none",
+                "absolute right-[14px] top-3 z-10 flex h-[18px] w-[18px] items-center justify-center font-rajdhani text-[14px] font-bold leading-none transition-colors duration-300",
                 isCompletedToday
                   ? "border-2 border-cyan bg-cyan/15 text-cyan"
                   : "border border-white/15 text-transparent",
@@ -242,7 +242,7 @@ export function HabitCard({
           <span className="relative z-10 block min-w-0 pr-8">
             <span
               className={[
-                "block truncate font-rajdhani text-base font-bold uppercase tracking-[0.5px]",
+                "block truncate font-rajdhani text-base font-bold uppercase tracking-[0.5px] transition-colors duration-300",
                 isCompletedToday ? "text-white" : "text-text-dim",
               ].join(" ")}
             >
@@ -250,7 +250,7 @@ export function HabitCard({
             </span>
             <span
               className={[
-                "mt-1 flex items-center gap-3 font-rajdhani text-[11px] font-semibold uppercase tracking-[0.5px]",
+                "mt-1 flex items-center gap-3 font-rajdhani text-[11px] font-semibold uppercase tracking-[0.5px] transition-colors duration-300",
                 isCompletedToday ? "text-cyan/70" : "text-text-muted",
               ].join(" ")}
             >
@@ -307,7 +307,7 @@ export function HabitCard({
           aria-expanded={isBackdateOpen}
           aria-label="LOG A PAST DAY"
           className={[
-            "relative z-10 flex w-9 shrink-0 flex-col items-center justify-center gap-0.5 border-l font-rajdhani text-[14px] font-bold",
+            "relative z-10 flex w-9 shrink-0 flex-col items-center justify-center gap-1 border-l",
             isBackdateOpen
               ? "border-cyan/20 bg-cyan/10 text-cyan"
               : "border-white/[0.06] text-text-muted transition hover:text-cyan",
@@ -316,17 +316,30 @@ export function HabitCard({
           onClick={() => setIsBackdateOpen(!isBackdateOpen)}
           type="button"
         >
-          <span aria-hidden="true">⟲</span>
+          {/* Drawn icon, not a unicode glyph: ⟲ falls back to an emoji face on
+              some Android system fonts and breaks the HUD. */}
+          <svg
+            aria-hidden="true"
+            className="h-3.5 w-3.5"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="square"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            <polyline points="2 4 2 10 8 10" />
+            <path d="M4.5 15a9 9 0 1 0 2.1-9.4L2 10" />
+          </svg>
           {/* The glyph alone was undiscoverable (issue #15) — a quiet visible
               label so the control is legible before the first tap. */}
-          <span className="text-[8px] font-semibold leading-none tracking-[1px]">
+          <span className="font-orbitron text-[8px] font-bold leading-none tracking-[1px]">
             PAST
           </span>
         </button>
       </div>
       {isBackdateOpen ? (
         <div className="absolute right-0 top-full z-20 mt-1 w-56 rounded-[4px] border border-cyan/20 bg-ground p-1 shadow-[0_8px_24px_rgba(0,0,0,0.6)]">
-          <p className="px-2 py-1.5 font-rajdhani text-[10px] font-semibold uppercase tracking-[2px] text-text-muted">
+          <p className="px-2 py-1.5 font-orbitron text-[9px] font-bold uppercase tracking-[2px] text-text-muted">
             LOG AS DONE ON
           </p>
           {backdateDates.map((date, index) => {

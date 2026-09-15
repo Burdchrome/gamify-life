@@ -135,7 +135,7 @@ export function ActiveHabitRow({ habit }: ActiveHabitRowProps) {
           </label>
           <input
             aria-label={"Rename " + habit.name}
-            className="min-h-12 rounded-[8px] border border-cyan-divider bg-ground px-4 font-rajdhani text-base font-bold uppercase tracking-[0.5px] text-text-primary outline-none transition focus:border-cyan disabled:cursor-not-allowed disabled:text-text-muted"
+            className="min-h-12 rounded-[4px] border border-cyan-divider bg-ground px-4 font-rajdhani text-base font-bold uppercase tracking-[0.5px] text-text-primary outline-none transition focus:border-cyan disabled:cursor-not-allowed disabled:text-text-muted"
             disabled={isPending}
             id={"habit-name-" + habit.id}
             maxLength={HABIT_NAME_MAX_LENGTH}
@@ -167,14 +167,14 @@ export function ActiveHabitRow({ habit }: ActiveHabitRowProps) {
 
         <div className="grid grid-cols-2 gap-2">
           <button
-            className="min-h-11 rounded-[8px] border border-cyan-divider px-3 font-orbitron text-[9px] font-bold uppercase tracking-[2px] text-cyan transition hover:border-cyan disabled:cursor-not-allowed disabled:text-text-muted"
+            className="min-h-11 rounded-[4px] border border-cyan-divider px-3 font-orbitron text-[9px] font-bold uppercase tracking-[2px] text-cyan transition hover:border-cyan disabled:cursor-not-allowed disabled:text-text-muted"
             disabled={isPending || !hasChanges}
             type="submit"
           >
             {isSaving ? "SAVING" : "SAVE"}
           </button>
           <button
-            className="min-h-11 rounded-[8px] border border-cyan-divider px-3 font-orbitron text-[9px] font-bold uppercase tracking-[2px] text-text-dim transition hover:border-cyan hover:text-cyan disabled:cursor-not-allowed disabled:text-text-muted"
+            className="min-h-11 rounded-[4px] border border-cyan-divider px-3 font-orbitron text-[9px] font-bold uppercase tracking-[2px] text-text-dim transition hover:border-cyan hover:text-cyan disabled:cursor-not-allowed disabled:text-text-muted"
             disabled={isPending}
             onClick={archiveHabit}
             type="button"

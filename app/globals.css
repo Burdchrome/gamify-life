@@ -49,6 +49,29 @@ select {
   font: inherit;
 }
 
+/* Browser chrome carries the HUD too: selection, caret, focus ring, and the
+   mobile tap flash all default to colors from no design system. */
+::selection {
+  background: rgb(37 225 237 / 30%);
+  color: var(--color-white);
+}
+
+input,
+textarea {
+  caret-color: var(--color-cyan);
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 2px;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
 .scanline-overlay {
   position: fixed;
   inset: 0;

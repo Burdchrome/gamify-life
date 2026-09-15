@@ -7,7 +7,7 @@ export function EmptyState() {
         NO OPS LOADED - SYSTEM STANDBY
       </p>
       <Link
-        className="mt-4 inline-flex min-h-11 items-center rounded-[8px] border border-cyan-divider px-4 font-orbitron text-[9px] font-bold uppercase tracking-[2px] text-cyan transition hover:border-cyan"
+        className="mt-4 inline-flex min-h-11 items-center rounded-[4px] border border-cyan-divider px-4 font-orbitron text-[9px] font-bold uppercase tracking-[2px] text-cyan transition hover:border-cyan"
         href="/manage"
       >
         UPLOAD PROTOCOLS VIA MANAGE

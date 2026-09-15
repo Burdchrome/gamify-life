@@ -50,7 +50,7 @@ export function LoginForm() {
         </label>
         <input
           autoComplete="email"
-          className="min-h-12 rounded-[8px] border border-cyan-divider bg-ground px-4 font-rajdhani text-lg font-semibold text-text-primary outline-none transition focus:border-cyan"
+          className="min-h-12 rounded-[4px] border border-cyan-divider bg-ground px-4 font-rajdhani text-lg font-semibold text-text-primary outline-none transition focus:border-cyan"
           id="email"
           inputMode="email"
           name="email"
@@ -70,7 +70,7 @@ export function LoginForm() {
         </label>
         <input
           autoComplete="current-password"
-          className="min-h-12 rounded-[8px] border border-cyan-divider bg-ground px-4 font-rajdhani text-lg font-semibold text-text-primary outline-none transition focus:border-cyan"
+          className="min-h-12 rounded-[4px] border border-cyan-divider bg-ground px-4 font-rajdhani text-lg font-semibold text-text-primary outline-none transition focus:border-cyan"
           id="password"
           name="password"
           onChange={(event) => setPassword(event.target.value)}
@@ -91,7 +91,7 @@ export function LoginForm() {
       ) : null}
 
       <button
-        className="min-h-12 rounded-[8px] border border-cyan bg-cyan px-4 font-orbitron text-xs font-bold uppercase tracking-[3px] text-ground transition hover:bg-ground hover:text-cyan disabled:cursor-not-allowed disabled:border-cyan-divider disabled:bg-surface disabled:text-text-muted"
+        className="min-h-12 rounded-[4px] border border-cyan bg-cyan px-4 font-orbitron text-xs font-bold uppercase tracking-[3px] text-ground transition hover:bg-ground hover:text-cyan disabled:cursor-not-allowed disabled:border-cyan-divider disabled:bg-surface disabled:text-text-muted"
         disabled={isSubmitting}
         type="submit"
       >
