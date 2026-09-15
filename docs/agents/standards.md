@@ -37,6 +37,15 @@ in a comment exactly what state it hands the next spec.
 Why: the suite runs against the live backend — leaked rows fail specs that
 run after, in ways that look unrelated.
 
+**Rule:** An e2e spec that asserts transient client state (an error
+notice, an optimistic revert) after a completed toggle settles first —
+`page.reload()` after the DB poll — before triggering the state under
+test.
+Why: every successful toggle fires `router.refresh()`, and when it lands
+the stateKey remount rebuilds the card from server truth, wiping local
+state mid-assertion (found 2026-09-15: the failure-injection spec's
+SYNC-FAILED notice vanished to exactly this race).
+
 **Rule:** New spec files must match the `chromium data` project's explicit
 `testMatch` regex in `playwright.config.ts` — extend the regex in the same
 change, or the spec silently never runs.
