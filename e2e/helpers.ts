@@ -164,6 +164,32 @@ export async function expectCompletionRow(
     .toBe(shouldExist);
 }
 
+// A one-off task is "done once" (issue #16): the invariant is the ROW COUNT,
+// not any single row's presence, so poll the count when a move is under test.
+export async function expectCompletionRowCount(
+  supabase: SupabaseClient,
+  habitName: string,
+  expectedCount: number,
+) {
+  await expect
+    .poll(
+      async () => {
+        const { data, error } = await supabase
+          .from("completions")
+          .select("id, habits!inner(name)")
+          .eq("habits.name", habitName);
+        if (error) {
+          throw new Error(
+            `Completion count poll failed for ${habitName}: ${error.message}`,
+          );
+        }
+        return data.length;
+      },
+      { timeout: 10_000 },
+    )
+    .toBe(expectedCount);
+}
+
 function getRequiredEnv(name: string) {
   const value = process.env[name];
 

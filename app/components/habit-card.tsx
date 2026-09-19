@@ -56,6 +56,7 @@ export function HabitCard({
   const [isBackdateOpen, setIsBackdateOpen] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [backdateNotice, setBackdateNotice] = useState<string | null>(null);
+  const [loggedDates, setLoggedDates] = useState<string[]>([]);
 
   async function toggleCompletion() {
     if (isSyncing) {
@@ -171,15 +172,30 @@ export function HabitCard({
     setIsSyncing(true);
 
     const supabase = createClient();
-    const { error } = await supabase.from("completions").insert({
-      habit_id: habit.id,
-      completed_on: completedOn,
-    });
+    const isCompletedTaskMove = habit.kind === "task" && isCompletedToday;
+    const today = getLocalDateIso(new Date());
+    const completionResult = isCompletedTaskMove
+      ? await supabase
+          .from("completions")
+          .update({ completed_on: completedOn })
+          .eq("habit_id", habit.id)
+          .eq("completed_on", today)
+          .select("id")
+      : await supabase.from("completions").insert({
+          habit_id: habit.id,
+          completed_on: completedOn,
+        });
+    const { error } = completionResult;
+    const movedCompletionRows = isCompletedTaskMove
+      ? completionResult.data
+      : null;
 
     // Unique violation = that day is already logged (race with another device):
     // the desired state already holds, so a resync is the whole fix.
-    if (error && error.code !== uniqueViolationCode) {
+    const isDuplicateCompletion = error?.code === uniqueViolationCode;
+    if (error && !isDuplicateCompletion) {
       console.error("Supabase backdated completion failed", {
+        action: isCompletedTaskMove ? "move" : "insert",
         habitId: habit.id,
         completedOn,
         code: error.code,
@@ -188,6 +204,46 @@ export function HabitCard({
       setSyncError("SYNC FAILED - RETRY");
       setIsSyncing(false);
       return;
+    }
+    if (isCompletedTaskMove && isDuplicateCompletion) {
+      console.warn("Supabase backdated completion move skipped: day already logged", {
+        habitId: habit.id,
+        completedOn,
+        code: error.code,
+        message: error.message,
+      });
+      setIsBackdateOpen(false);
+      setIsSyncing(false);
+      startTransition(() => router.refresh());
+      return;
+    }
+    if (
+      isCompletedTaskMove &&
+      (movedCompletionRows?.length ?? 0) === 0
+    ) {
+      // Issue #16: PostgREST treats a zero-row UPDATE as success. Continuing
+      // after another device un-tapped the task would archive it with zero
+      // completion rows again - the #9 stranding case.
+      console.error("Supabase backdated completion move matched no rows", {
+        habitId: habit.id,
+        completedOn,
+        today,
+      });
+      setIsBackdateOpen(false);
+      setIsSyncing(false);
+      startTransition(() => router.refresh());
+      return;
+    }
+
+    setLoggedDates((currentLoggedDates) =>
+      currentLoggedDates.includes(completedOn)
+        ? currentLoggedDates
+        : [...currentLoggedDates, completedOn],
+    );
+    if (isCompletedTaskMove) {
+      // #16: a moved row is no longer a today op; flip before the refresh lands.
+      setIsCompletedToday(false);
+      onTodayCompletionChange(-1);
     }
 
     // A backdated task was done on that day — it clears immediately (the
@@ -243,6 +299,7 @@ export function HabitCard({
         : "border border-white/[0.06] bg-white/[0.02]",
   ].join(" ");
   const backdateDates = listBackdateDates(new Date());
+  const loggedOrServerDates = [...completedOnDates, ...loggedDates];
 
   return (
     <div className="relative">
@@ -371,7 +428,7 @@ export function HabitCard({
             LOG AS DONE ON
           </p>
           {backdateDates.map((date, index) => {
-            const isAlreadyLogged = completedOnDates.includes(date);
+            const isAlreadyLogged = loggedOrServerDates.includes(date);
 
             return (
               <button

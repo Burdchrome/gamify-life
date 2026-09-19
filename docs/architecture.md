@@ -25,7 +25,10 @@ rendered as quiet progress), `weekly` (genuinely N-per-week; once the target
 is met on an earlier day the card rests — dimmed, untappable, out of the
 day's ops count — until the device-local Monday). A tap can also be
 **backdated** (#10): a secondary control logs "done on" one of the past 7
-days through the same device-dated write path as a plain tap.
+days through the same device-dated write path as a plain tap. For a task
+already completed today, backdating is a correction, not another completion:
+the existing today row moves to the picked day (issue #16), while dailies and
+weeklies keep the per-day insert behavior.
 
 ## How a request flows
 
