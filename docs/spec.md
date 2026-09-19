@@ -39,7 +39,7 @@ Josh is the only user — that architecture is itself portfolio signal.
 7. As Josh, I want completions to persist across devices, so that what I log on my phone is there on my desktop.
 8. As Josh, I want a habit's completion tied to the correct local calendar day, so that a 11:50pm log counts for today, not tomorrow-in-UTC.
 9. As Josh, I want to create a habit with a name and weekly target, so that the tracker reflects my actual life without me editing a database.
-10. As Josh, I want to rename a habit or change its target, so that habits evolve without losing history.
+10. As Josh, I want to rename a habit, change its target, or change its kind, so that habits evolve without losing history.
 11. As Josh, I want to archive a habit rather than delete it, so that history survives when a habit retires.
 12. As Josh, I want an empty state that tells me what to do when I have zero habits, so that day one isn't a blank screen.
 13. As Josh, I want the app to look like the Neon Street HUD from the first screen, so that using it feels like my app, not a gray scaffold.

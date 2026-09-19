@@ -40,7 +40,8 @@ in the matcher, or unauthenticated fetches get the login page instead. Then the 
 (`requireUserId` — belt and braces, in case the proxy matcher ever drifts) and
 fetches that user's rows. The page ships to the browser with small **client
 leaves** for anything interactive: the habit-card tap, the Manage forms, the
-login form.
+login form. Manage creates, renames, retargets, archives, and reclassifies a
+habit's kind after creation (issue #17).
 
 **Reads happen on the server. Writes happen in the browser** — a tap inserts
 or deletes a completion row directly against Supabase, optimistically (UI

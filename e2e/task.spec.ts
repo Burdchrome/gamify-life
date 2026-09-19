@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { getLocalDateIso, listBackdateDates } from "../lib/dates";
 import {
+  createForm,
   createSignedInSupabaseClient,
   decoyAccount,
   expectCompletionRow,
@@ -96,7 +97,7 @@ test("a completed task clears into the archive; un-tapping restores it", async (
   // Create a task from Manage.
   await page.getByRole("link", { name: "MANAGE" }).click();
   await page.getByLabel("Protocol Name").fill("PAY RENT");
-  await page.getByRole("button", { name: "TASK", exact: true }).click();
+  await createForm(page).getByRole("button", { name: "TASK", exact: true }).click();
   await page.getByRole("button", { name: "UPLOAD", exact: true }).click();
   await expect(
     page.getByRole("article", { name: "Active protocol PAY RENT" }),
@@ -157,7 +158,7 @@ test("a task backdated to a past day archives without counting toward today's op
 
   await page.getByRole("link", { name: "MANAGE" }).click();
   await page.getByLabel("Protocol Name").fill("RETURN LIBRARY BOOK");
-  await page.getByRole("button", { name: "TASK", exact: true }).click();
+  await createForm(page).getByRole("button", { name: "TASK", exact: true }).click();
   await page.getByRole("button", { name: "UPLOAD", exact: true }).click();
   await expect(
     page.getByRole("article", { name: "Active protocol RETURN LIBRARY BOOK" }),
@@ -205,7 +206,7 @@ test("a failed un-tap write leaves the task recoverable, not stranded", async ({
 
   await page.getByRole("link", { name: "MANAGE" }).click();
   await page.getByLabel("Protocol Name").fill("FILE TAXES");
-  await page.getByRole("button", { name: "TASK", exact: true }).click();
+  await createForm(page).getByRole("button", { name: "TASK", exact: true }).click();
   await page.getByRole("button", { name: "UPLOAD", exact: true }).click();
   await expect(
     page.getByRole("article", { name: "Active protocol FILE TAXES" }),
@@ -253,7 +254,7 @@ test("the backdate control is labeled and a backdated task announces before clea
 
   await page.getByRole("link", { name: "MANAGE" }).click();
   await page.getByLabel("Protocol Name").fill("CALL DENTIST");
-  await page.getByRole("button", { name: "TASK", exact: true }).click();
+  await createForm(page).getByRole("button", { name: "TASK", exact: true }).click();
   await page.getByRole("button", { name: "UPLOAD", exact: true }).click();
   await expect(
     page.getByRole("article", { name: "Active protocol CALL DENTIST" }),
@@ -302,7 +303,7 @@ test("backdating a task already completed today moves the completion instead of 
 
   await page.getByRole("link", { name: "MANAGE" }).click();
   await page.getByLabel("Protocol Name").fill("RENEW PASSPORT");
-  await page.getByRole("button", { name: "TASK", exact: true }).click();
+  await createForm(page).getByRole("button", { name: "TASK", exact: true }).click();
   await page.getByRole("button", { name: "UPLOAD", exact: true }).click();
   await expect(
     page.getByRole("article", { name: "Active protocol RENEW PASSPORT" }),
@@ -468,7 +469,7 @@ test("a move whose today row is already gone resyncs instead of stranding the ta
 
   await page.getByRole("link", { name: "MANAGE" }).click();
   await page.getByLabel("Protocol Name").fill("RENEW PASSPORT");
-  await page.getByRole("button", { name: "TASK", exact: true }).click();
+  await createForm(page).getByRole("button", { name: "TASK", exact: true }).click();
   await page.getByRole("button", { name: "UPLOAD", exact: true }).click();
   await expect(
     page.getByRole("article", { name: "Active protocol RENEW PASSPORT" }),

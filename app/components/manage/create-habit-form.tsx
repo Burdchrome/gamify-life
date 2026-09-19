@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { KindPicker } from "./kind-picker";
 import { TargetPicker } from "./target-picker";
 import { type HabitKind } from "./types";
 import {
@@ -10,12 +11,6 @@ import {
   validateHabitName,
   validateWeeklyTarget,
 } from "./validation";
-
-const kindOptions: { value: HabitKind; label: string }[] = [
-  { value: "task", label: "TASK" },
-  { value: "daily", label: "DAILY" },
-  { value: "weekly", label: "WEEKLY" },
-];
 
 export function CreateHabitForm() {
   const router = useRouter();
@@ -106,36 +101,12 @@ export function CreateHabitForm() {
           />
         </div>
 
-        <fieldset className="flex flex-col gap-2" disabled={isSubmitting}>
-          <legend
-            className="font-orbitron text-[9px] font-bold uppercase tracking-[2px] text-cyan"
-            id="create-kind-label"
-          >
-            Type
-          </legend>
-          <div
-            aria-labelledby="create-kind-label"
-            className="grid grid-cols-3 gap-1"
-            role="group"
-          >
-            {kindOptions.map((option) => (
-              <button
-                aria-pressed={kind === option.value}
-                className={[
-                  "min-h-11 min-w-0 rounded-[4px] border px-0 font-orbitron text-[11px] font-bold uppercase tracking-[0px] transition disabled:cursor-not-allowed",
-                  kind === option.value
-                    ? "border-cyan bg-cyan text-ground"
-                    : "border-cyan-divider bg-ground text-text-dim hover:border-cyan hover:text-cyan",
-                ].join(" ")}
-                key={option.value}
-                onClick={() => setKind(option.value)}
-                type="button"
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </fieldset>
+        <KindPicker
+          id="create-kind"
+          isDisabled={isSubmitting}
+          onChange={setKind}
+          value={kind}
+        />
 
         {kind === "task" ? null : (
           <TargetPicker

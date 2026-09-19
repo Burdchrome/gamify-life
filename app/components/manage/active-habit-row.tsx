@@ -3,8 +3,9 @@
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { KindPicker } from "./kind-picker";
 import { TargetPicker } from "./target-picker";
-import { type ManageHabit } from "./types";
+import { type HabitKind, type ManageHabit } from "./types";
 import {
   HABIT_NAME_MAX_LENGTH,
   validateHabitName,
@@ -18,14 +19,16 @@ type ActiveHabitRowProps = {
 export function ActiveHabitRow({ habit }: ActiveHabitRowProps) {
   const router = useRouter();
   const [name, setName] = useState(habit.name);
+  const [kind, setKind] = useState<HabitKind>(habit.kind);
   const [targetPerWeek, setTargetPerWeek] = useState(habit.target_per_week);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const isPending = isSaving || isArchiving;
-  const isTask = habit.kind === "task";
+  const isTask = kind === "task";
   const hasChanges =
     name.trim() !== habit.name ||
+    kind !== habit.kind ||
     (!isTask && targetPerWeek !== habit.target_per_week);
 
   async function saveHabit(event: FormEvent<HTMLFormElement>) {
@@ -44,13 +47,13 @@ export function ActiveHabitRow({ habit }: ActiveHabitRowProps) {
 
     try {
       const supabase = createClient();
+      // Issue #17: task reclassification stays active and preserves target_per_week for switching back.
+      const updatePayload = isTask
+        ? { name: nameResult.value, kind }
+        : { name: nameResult.value, kind, target_per_week: targetPerWeek };
       const { error } = await supabase
         .from("habits")
-        .update(
-          isTask
-            ? { name: nameResult.value }
-            : { name: nameResult.value, target_per_week: targetPerWeek },
-        )
+        .update(updatePayload)
         .eq("id", habit.id)
         .eq("is_archived", false);
 
@@ -58,6 +61,7 @@ export function ActiveHabitRow({ habit }: ActiveHabitRowProps) {
         console.error("Supabase habit update failed", {
           code: error.code,
           habitId: habit.id,
+          kind,
           message: error.message,
           nameLength: nameResult.value.length,
           targetPerWeek,
@@ -72,6 +76,7 @@ export function ActiveHabitRow({ habit }: ActiveHabitRowProps) {
         error instanceof Error ? error.message : "Unknown habit update error.";
       console.error("Supabase habit update failed", {
         habitId: habit.id,
+        kind,
         message,
       });
       setErrorMessage("UPDATE FAILED - RETRY");
@@ -145,6 +150,13 @@ export function ActiveHabitRow({ habit }: ActiveHabitRowProps) {
             value={name}
           />
         </div>
+
+        <KindPicker
+          id={"kind-" + habit.id}
+          isDisabled={isPending}
+          onChange={setKind}
+          value={kind}
+        />
 
         {isTask ? null : (
           <TargetPicker

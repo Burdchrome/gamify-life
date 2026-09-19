@@ -134,6 +134,12 @@ async function deleteHabitRows(supabase: SupabaseClient, accountLabel: string) {
   }
 }
 
+// Every active Manage row carries its own kind + target pickers (issue #17), so
+// a locator aimed at the NEW-habit form has to be scoped to it by name.
+export function createForm(page: Page) {
+  return page.getByRole("form", { name: "Create protocol" });
+}
+
 // The card's writes are optimistic: the UI flips before the request lands, so
 // a reload or follow-up click right after an assertion can kill an in-flight
 // write (the trap completions.spec documents). Poll the DB row to know a
