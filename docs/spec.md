@@ -13,11 +13,7 @@ ground-truth research in `.scratch/gamify-life/`, Supabase sandbox run
 Josh built a working habit tracker (v1: Express + React + SQLite) but it
 lives on his desktop's localhost. Habit logging happens on the couch, in
 bed, at work — on a phone. An app you can't reach in those moments doesn't
-get used, and v1 never got used. Separately, Josh is pursuing a job
-opportunity and needs a real, showable project: a deployed URL and a
-readable repo that demonstrate his skills. v1 can do neither from a desktop
-folder.
-
+get used, and v1 never got used. Separately, 
 ## Solution
 
 Rebuild the tracker online: Next.js + Supabase (hosted Postgres + auth) +
