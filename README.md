@@ -9,6 +9,15 @@ used; habit logging happens on the couch and in bed, on a phone. This rebuild
 is also the portfolio piece — a correctly built multi-user app (per-user rows,
 RLS) that happens to have one user.
 
+## How it was built
+
+I'm the architect and quality bar, not the typist. The code was written by AI
+coding agents (Claude, Codex) working from the spec, GitHub tickets, and tests
+I directed. What I own is the structure: the two-lock security model (grants +
+RLS) in every migration, the architecture brief in `docs/`, and the e2e suite
+that runs against the real backend so I can trust changes without reading
+every diff.
+
 ## Stack
 
 - Next.js 16 (App Router) + TypeScript on Vercel
@@ -52,3 +61,7 @@ and the migrations in `supabase/migrations/` applied to the project.
 
 Work is tracked in this repo's GitHub issues; each ticket's commit message
 carries its verification evidence.
+
+## License
+
+[MIT](LICENSE).
