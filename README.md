@@ -11,12 +11,10 @@ RLS) that happens to have one user.
 
 ## How it was built
 
-I'm the architect and quality bar, not the typist. The code was written by AI
-coding agents (Claude, Codex) working from the spec, GitHub tickets, and tests
-I directed. What I own is the structure: the two-lock security model (grants +
-RLS) in every migration, the architecture brief in `docs/`, and the e2e suite
-that runs against the real backend so I can trust changes without reading
-every diff.
+I'm the architect and quality bar, not the typist. What I own is the
+structure: the two-lock security model (grants + RLS) in every migration, the
+architecture brief in `docs/`, and the e2e suite that runs against the real
+backend so I can trust changes without reading every diff.
 
 ## Stack
 

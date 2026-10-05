@@ -54,8 +54,8 @@ Josh is the only user — that architecture is itself portfolio signal.
 ## Implementation Decisions
 
 - **Stack:** Next.js (App Router) + Tailwind + Supabase (`@supabase/ssr`
-  cookie-based auth), deployed on Vercel from a private GitHub repo (public
-  later, one click). Repo is standalone — new front door, not a folder in
+  cookie-based auth), deployed on Vercel from a public GitHub repo (private
+  through the build; flipped 2026-10-05). Repo is standalone — new front door, not a folder in
   the EA workspace.
 - **Design tokens first:** Neon Street HUD palette/type from v1's DESIGN.md
   wired into the Tailwind theme before any screen is built. Deep polish
